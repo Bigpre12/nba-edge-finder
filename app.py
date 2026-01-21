@@ -51,8 +51,14 @@ def save_projections(projections):
         print(f"Error saving projections: {e}")
         return False
 
-# Load projections on startup
-MARKET_PROJECTIONS = load_projections()
+# Load projections on startup (lazy load to avoid blocking)
+MARKET_PROJECTIONS = {}
+def get_market_projections():
+    """Lazy load projections to avoid blocking startup."""
+    global MARKET_PROJECTIONS
+    if not MARKET_PROJECTIONS:
+        MARKET_PROJECTIONS = get_market_projections()
+    return MARKET_PROJECTIONS
 
 # Initialize scheduler for daily updates (only start if not already running)
 scheduler = None
@@ -126,7 +132,7 @@ def get_edges_data(show_only_70_plus=True):
         
         # Track line changes before checking edges
         global MARKET_PROJECTIONS
-        MARKET_PROJECTIONS = load_projections()
+        MARKET_PROJECTIONS = get_market_projections()
         track_line_changes(MARKET_PROJECTIONS)
         
         result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, include_streaks=True, min_streak=2, include_factors=True)
@@ -193,7 +199,7 @@ def index():
     Only shows 70%+ probability props by default.
     """
     global MARKET_PROJECTIONS
-    MARKET_PROJECTIONS = load_projections()  # Reload from file
+    MARKET_PROJECTIONS = get_market_projections()  # Lazy load
     
     # Auto-load all active players if projections file is empty or has default values
     # Do this in background to avoid blocking startup
@@ -320,7 +326,7 @@ def api_projections():
             return jsonify({'success': False, 'error': str(e)}), 500
     
     # GET request
-    MARKET_PROJECTIONS = load_projections()
+    MARKET_PROJECTIONS = get_market_projections()
     return jsonify({
         'projections': MARKET_PROJECTIONS,
         'count': len(MARKET_PROJECTIONS)
