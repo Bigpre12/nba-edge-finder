@@ -8,6 +8,10 @@ from line_tracker import (
 from auth import requires_auth
 from cache_manager import clear_old_cache
 from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display
+from advanced_analytics import (
+    enhance_edge_with_analytics, sort_edges_by_ev, sort_edges_by_market_edge,
+    sort_edges_by_grade, apply_tactical_filters, get_sort_options, get_filter_options
+)
 import json
 import os
 import atexit
@@ -160,22 +164,24 @@ def get_edges_data(show_only_70_plus=True):
         all_edges = result.get('edges', [])
         streaks = result.get('streaks', [])
         
-        # Calculate probability for each edge and filter to 70%+
-        if show_only_70_plus:
-            edges = []
-            for edge in all_edges:
-                factors = edge.get('factors', {})
-                streak_info = edge.get('streak', {}) if edge.get('streak', {}).get('active') else None
-                probability = calculate_hit_probability(edge, factors, streak_info)
-                
-                if probability >= 70.0:
-                    edge['probability'] = probability
-                    edges.append(edge)
-        else:
-            edges = all_edges
+        # Calculate probability and enhance with analytics for each edge
+        edges = []
+        for edge in all_edges:
+            factors = edge.get('factors', {})
+            streak_info = edge.get('streak', {}) if edge.get('streak', {}).get('active') else None
+            probability = calculate_hit_probability(edge, factors, streak_info)
+            edge['probability'] = probability
+            
+            # Enhance with advanced analytics (EV, grades, etc.)
+            edge = enhance_edge_with_analytics(edge, default_odds=-110)
+            edges.append(edge)
         
-        # Sort edges by probability (highest first)
-        edges.sort(key=lambda x: x.get('probability', 0), reverse=True)
+        # Filter to 70%+ if requested
+        if show_only_70_plus:
+            edges = [e for e in edges if e.get('probability', 0) >= 70.0]
+        
+        # Default sort by EV (highest first)
+        edges = sort_edges_by_ev(edges, reverse=True)
         
         # Sort streaks by streak count (longest first)
         streaks.sort(key=lambda x: x.get('streak_count', 0), reverse=True)

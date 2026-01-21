@@ -33,6 +33,80 @@
                 <input type="checkbox" id="showAllToggle" onchange="toggleShowAll()">
                 <span>Show All Edges (not just 70%+)</span>
             </label>
+            <button onclick="showTacticalFilters()" class="filter-btn" id="filterBtn">🔍 Tactical Filters</button>
+        </div>
+
+        <!-- Tactical Filters Panel -->
+        <div id="tacticalFiltersPanel" class="tactical-filters-panel" style="display: none;">
+            <div class="filters-header">
+                <h3>🔍 Tactical Filters & Sorting</h3>
+                <button onclick="hideTacticalFilters()" class="close-btn">✕</button>
+            </div>
+            
+            <div class="filters-content">
+                <div class="filters-section">
+                    <h4>Sort By</h4>
+                    <select id="sortSelect" onchange="applyFilters()" class="filter-select">
+                        <option value="ev">Expected Value (EV)</option>
+                        <option value="market_edge">Market Edge %</option>
+                        <option value="probability">Probability</option>
+                        <option value="grade">Matchup Grade</option>
+                        <option value="edge">Edge Size</option>
+                        <option value="kelly">Kelly Criterion</option>
+                    </select>
+                </div>
+                
+                <div class="filters-section">
+                    <h4>Filters</h4>
+                    <div class="filter-group">
+                        <label>Min Probability: <span id="probValue">70</span>%</label>
+                        <input type="range" id="minProbFilter" min="50" max="95" value="70" oninput="document.getElementById('probValue').textContent = this.value; applyFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min EV: $<span id="evValue">0</span></label>
+                        <input type="range" id="minEvFilter" min="0" max="50" value="0" oninput="document.getElementById('evValue').textContent = this.value; applyFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min Market Edge: <span id="edgeValue">0</span>%</label>
+                        <input type="range" id="minEdgeFilter" min="0" max="20" value="0" oninput="document.getElementById('edgeValue').textContent = this.value; applyFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min Grade:</label>
+                        <select id="minGradeFilter" onchange="applyFilters()" class="filter-select">
+                            <option value="">Any</option>
+                            <option value="A+">A+</option>
+                            <option value="A">A</option>
+                            <option value="B+">B+</option>
+                            <option value="B" selected>B</option>
+                            <option value="C+">C+</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="positiveEvOnly" onchange="applyFilters()">
+                            Positive EV Only
+                        </label>
+                    </div>
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="excludeInjuries" onchange="applyFilters()">
+                            Exclude Injury Risks
+                        </label>
+                    </div>
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="excludeRotation" onchange="applyFilters()">
+                            Exclude Rotation Changes
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="filters-actions">
+                    <button onclick="resetFilters()" class="reset-btn">Reset Filters</button>
+                    <button onclick="hideTacticalFilters()" class="apply-btn">Apply</button>
+                </div>
+            </div>
         </div>
 
         <div id="loadProgress" class="load-progress" style="display: none;">
@@ -114,7 +188,19 @@
                     <div class="edges-grid" id="edgesGrid">
                         {% for edge in edges %}
                         <div class="oracle-card {{ edge.recommendation|lower }}">
-                            <div class="oracle-player">{{ edge.player }}</div>
+                            <div class="oracle-header-row">
+                                <div class="oracle-player">{{ edge.player }}</div>
+                                {% if edge.ev %}
+                                <div class="ev-badge {% if edge.ev.is_positive_ev %}positive-ev{% else %}negative-ev{% endif %}">
+                                    EV: ${{ edge.ev.ev|round(2) }}
+                                </div>
+                                {% endif %}
+                                {% if edge.matchup_grade %}
+                                <div class="grade-badge grade-{{ edge.matchup_grade.grade|lower|replace('+', 'plus')|replace('-', 'minus') }}">
+                                    {{ edge.matchup_grade.grade }}
+                                </div>
+                                {% endif %}
+                            </div>
                             {% if edge.oracle %}
                             <div class="oracle-content">
                                 <div class="oracle-line">
@@ -858,7 +944,8 @@
             loadingIndicator.style.display = 'inline';
             
             try {
-                const url = showAll ? '/api/edges?show_all=true' : '/api/edges';
+                const filterParams = buildFilterParams();
+                const url = '/api/edges' + (filterParams ? '?' + filterParams : '');
                 const response = await fetch(url);
                 const data = await response.json();
                 updatePage(data);
