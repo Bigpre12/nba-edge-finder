@@ -94,6 +94,11 @@ def get_edges_data():
     try:
         from nba_engine import filter_high_probability_props
         
+        # Track line changes before checking edges
+        global MARKET_PROJECTIONS
+        MARKET_PROJECTIONS = load_projections()
+        track_line_changes(MARKET_PROJECTIONS)
+        
         result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, include_streaks=True, min_streak=2, include_factors=True)
         edges = result.get('edges', [])
         streaks = result.get('streaks', [])
