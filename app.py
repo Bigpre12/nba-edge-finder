@@ -66,10 +66,25 @@ def save_projections(projections):
             print("⚠️ Warning: Attempted to save empty projections")
             return False
         
+        file_path = os.path.abspath(PROJECTIONS_FILE)
+        print(f"💾 Saving {len(projections)} players to: {file_path}")
+        
         with open(PROJECTIONS_FILE, 'w') as f:
             json.dump(projections, f, indent=2)
-        print(f"💾 Saved {len(projections)} players to {PROJECTIONS_FILE}")
-        return True
+        
+        # Verify it was saved
+        if os.path.exists(PROJECTIONS_FILE):
+            file_size = os.path.getsize(PROJECTIONS_FILE)
+            print(f"✅ Successfully saved {len(projections)} players to {PROJECTIONS_FILE}")
+            print(f"   File size: {file_size} bytes")
+            print(f"   Sample players saved: {', '.join(list(projections.keys())[:5])}...")
+            return True
+        else:
+            print(f"❌ File was not created at {file_path}")
+            return False
+    except PermissionError as e:
+        print(f"❌ Permission denied saving to {PROJECTIONS_FILE}: {e}")
+        return False
     except Exception as e:
         print(f"❌ Error saving projections: {e}")
         import traceback
@@ -85,6 +100,7 @@ def get_market_projections():
     if not _projections_loaded:
         MARKET_PROJECTIONS = load_projections()
         _projections_loaded = True
+        print(f"📊 Current market projections: {len(MARKET_PROJECTIONS)} players")
     return MARKET_PROJECTIONS
 
 # Initialize scheduler for daily updates (only start if not already running)
