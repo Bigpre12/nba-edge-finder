@@ -167,33 +167,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS'):
         global MARKET_PROJECTIONS
         MARKET_PROJECTIONS = get_market_projections()
         
-        # If we have very few players (only defaults), generate projections for all active players for this stat type
-        if len(MARKET_PROJECTIONS) <= 3:
-            print(f"Only {len(MARKET_PROJECTIONS)} players in projections, generating for {stat_type}...")
-            try:
-                # Generate projections for all active players for the selected stat type
-                from nba_engine import get_all_active_players, get_season_average
-                import time
-                active_players = get_all_active_players()
-                temp_projections = {}
-                for i, player in enumerate(active_players[:50]):  # Limit to 50 for speed
-                    try:
-                        player_id = player['id']
-                        player_name = player['full_name']
-                        avg = get_season_average(player_id, stat_type=stat_type, season='2023-24')
-                        if avg is not None:
-                            temp_projections[player_name] = round(avg, 1)
-                        if (i + 1) % 10 == 0:
-                            time.sleep(1)  # Rate limiting
-                    except Exception as e:
-                        print(f"Error getting {player_name} {stat_type}: {e}")
-                        continue
-                
-                if temp_projections:
-                    MARKET_PROJECTIONS = temp_projections
-                    print(f"Generated {len(MARKET_PROJECTIONS)} projections for {stat_type}")
-            except Exception as e:
-                print(f"Error generating projections for {stat_type}: {e}")
+        # Note: Don't generate projections here - it blocks the request
+        # Use the "Load All Active Players" button or wait for background load
+        # For different stat types, we'll use the same projections but check edges for that stat
         
         track_line_changes(MARKET_PROJECTIONS)
         
@@ -406,32 +382,45 @@ def api_load_all_players():
     """
     API endpoint to generate projections for all active players.
     This may take several minutes due to API rate limits.
+    Runs in background to avoid blocking.
     """
     try:
         data = request.get_json() or {}
         season = data.get('season', '2023-24')
         stat_type = data.get('stat_type', 'PTS')
         
-        # Generate projections for all active players
-        projections = generate_projections_from_active_players(
-            stat_type=stat_type,
-            season=season
-        )
+        # Run in background thread to avoid blocking
+        import threading
+        def background_load():
+            try:
+                print(f"Loading all active players for {stat_type}...")
+                projections = generate_projections_from_active_players(
+                    stat_type=stat_type,
+                    season=season
+                )
+                
+                if projections and len(projections) > 0:
+                    save_projections(projections)
+                    global MARKET_PROJECTIONS
+                    MARKET_PROJECTIONS = projections
+                    print(f"Successfully loaded {len(projections)} players for {stat_type}")
+                else:
+                    print(f"Warning: No players loaded for {stat_type}")
+            except Exception as e:
+                print(f"Error loading players: {e}")
+                import traceback
+                traceback.print_exc()
         
-        # Save to file
-        if save_projections(projections):
-            global MARKET_PROJECTIONS
-            MARKET_PROJECTIONS = projections
-            return jsonify({
-                'success': True,
-                'message': f'Loaded {len(projections)} players',
-                'count': len(projections)
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to save projections'
-            }), 500
+        # Start background thread
+        thread = threading.Thread(target=background_load, daemon=True)
+        thread.start()
+        
+        # Return immediately
+        return jsonify({
+            'success': True,
+            'message': 'Loading players in background. This may take 10-15 minutes. Check back later.',
+            'status': 'started'
+        })
             
     except Exception as e:
         return jsonify({
