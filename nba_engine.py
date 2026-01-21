@@ -49,7 +49,19 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
         log = playergamelog.PlayerGameLog(player_id=pid, season=season)
         df = log.get_data_frames()[0].head(games)
         
-        if df.empty or stat_type not in df.columns:
+        if df.empty:
+            return None
+        
+        # Handle combination stats (e.g., PTS+REB)
+        is_combination = '+' in stat_type
+        if is_combination:
+            components = stat_type.split('+')
+        else:
+            components = [stat_type]
+        
+        # Check if all required columns exist
+        missing_cols = [col for col in components if col not in df.columns]
+        if missing_cols:
             return None
         
         # Return list of games with stat values and additional context
@@ -63,15 +75,28 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
             else:
                 minutes_float = float(minutes) if pd.notna(minutes) else 0
             
+            # Calculate stat value (sum for combinations)
+            if is_combination:
+                stat_value = sum(row.get(col, 0) if pd.notna(row.get(col, 0)) else 0 for col in components)
+            else:
+                stat_value = row.get(stat_type, 0) if pd.notna(row.get(stat_type, 0)) else 0
+            
             game_list.append({
                 'game_date': row.get('GAME_DATE', ''),
-                'stat_value': row[stat_type],
+                'stat_value': stat_value,
                 'matchup': row.get('MATCHUP', ''),
                 'minutes': minutes_float,
                 'did_not_play': minutes_float < 1.0,  # DNP if less than 1 minute
                 'wl': row.get('WL', ''),  # Win/Loss
                 'fgm': row.get('FGM', 0),  # Field goals made
                 'fga': row.get('FGA', 0),  # Field goals attempted
+                # Store individual stats for combination calculations
+                'pts': row.get('PTS', 0) if pd.notna(row.get('PTS', 0)) else 0,
+                'reb': row.get('REB', 0) if pd.notna(row.get('REB', 0)) else 0,
+                'ast': row.get('AST', 0) if pd.notna(row.get('AST', 0)) else 0,
+                'stl': row.get('STL', 0) if pd.notna(row.get('STL', 0)) else 0,
+                'blk': row.get('BLK', 0) if pd.notna(row.get('BLK', 0)) else 0,
+                'fg3m': row.get('FG3M', 0) if pd.notna(row.get('FG3M', 0)) else 0,  # 3-pointers made
             })
         
         # Cache the result
@@ -217,6 +242,7 @@ def generate_projections_from_active_players(stat_type='PTS', season='2023-24', 
         player_id = player['id']
         
         # Get season average as projection
+        # For combination stats, get_season_average handles it
         avg = get_season_average(player_id, stat_type=stat_type, season=season)
         
         if avg is not None:
