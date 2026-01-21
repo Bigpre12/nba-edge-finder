@@ -51,25 +51,31 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 
 def daily_update_job():
-    """Run daily update at 8am - refresh edges and track line changes."""
+    """Run daily update at 8am - load all active players and refresh edges."""
     global MARKET_PROJECTIONS
     print(f"[{datetime.now()}] Running daily update at 8am...")
     
     try:
-        # Reload projections
-        MARKET_PROJECTIONS = load_projections()
+        # Auto-load all active players and generate projections
+        print("Loading all active NBA players...")
+        new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
         
-        # Track line changes
-        changes = track_line_changes(MARKET_PROJECTIONS)
+        # Track line changes before updating
+        old_projections = load_projections()
+        changes = track_line_changes(new_projections)
         if changes:
             print(f"Line changes detected: {len(changes)} players")
             for player, change in changes.items():
                 print(f"  {player}: {change['previous']} → {change['current']} ({change['direction']})")
         
+        # Save new projections
+        MARKET_PROJECTIONS = new_projections
+        save_projections(MARKET_PROJECTIONS)
+        
         # Refresh edges data (pre-cache for faster access)
         get_edges_data()
         
-        print("Daily update complete!")
+        print(f"Daily update complete! Loaded {len(MARKET_PROJECTIONS)} active players.")
     except Exception as e:
         print(f"Error in daily update: {e}")
 
@@ -87,12 +93,13 @@ scheduler.add_job(
 # Shut down scheduler on app exit
 atexit.register(lambda: scheduler.shutdown())
 
-def get_edges_data():
+def get_edges_data(show_only_70_plus=True):
     """
     Helper function to fetch edges data.
+    Only returns 70%+ probability props by default.
     """
     try:
-        from nba_engine import filter_high_probability_props
+        from nba_engine import filter_high_probability_props, calculate_hit_probability
         
         # Track line changes before checking edges
         global MARKET_PROJECTIONS
@@ -100,27 +107,44 @@ def get_edges_data():
         track_line_changes(MARKET_PROJECTIONS)
         
         result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, include_streaks=True, min_streak=2, include_factors=True)
-        edges = result.get('edges', [])
+        all_edges = result.get('edges', [])
         streaks = result.get('streaks', [])
+        
+        # Calculate probability for each edge and filter to 70%+
+        if show_only_70_plus:
+            edges = []
+            for edge in all_edges:
+                factors = edge.get('factors', {})
+                streak_info = edge.get('streak', {}) if edge.get('streak', {}).get('active') else None
+                probability = calculate_hit_probability(edge, factors, streak_info)
+                
+                if probability >= 70.0:
+                    edge['probability'] = probability
+                    edges.append(edge)
+        else:
+            edges = all_edges
+        
+        # Sort edges by probability (highest first)
+        edges.sort(key=lambda x: x.get('probability', 0), reverse=True)
         
         # Sort streaks by streak count (longest first)
         streaks.sort(key=lambda x: x.get('streak_count', 0), reverse=True)
         
-        # Sort edges by factors (injuries/rotation changes first)
+        # Sort edges by factors (injuries/rotation changes first) if same probability
         def sort_key(edge):
             factors = edge.get('factors', {})
-            score = 0
+            score = edge.get('probability', 0) * 10  # Probability is primary
             if factors.get('injury_risk'):
-                score += 100
+                score -= 50  # Penalize injuries
             if factors.get('rotation_change'):
-                score += 50
+                score -= 25  # Penalize rotation changes
             if factors.get('recent_dnp'):
-                score += 75
+                score -= 40  # Penalize recent DNP
             return score
         
         edges.sort(key=sort_key, reverse=True)
         
-        # Filter for 70%+ probability props
+        # Filter for 70%+ probability props (for high prob section)
         high_prob_props = filter_high_probability_props(edges, min_probability=70.0)
         
         return edges, streaks, high_prob_props, None
@@ -132,25 +156,45 @@ def get_edges_data():
 def index():
     """
     Main route that displays NBA betting edges.
+    Only shows 70%+ probability props by default.
     """
     global MARKET_PROJECTIONS
     MARKET_PROJECTIONS = load_projections()  # Reload from file
-    edges, streaks, high_prob_props, error = get_edges_data()
+    
+    # Auto-load all active players if projections file is empty or has default values
+    if len(MARKET_PROJECTIONS) <= 3:  # Only default players
+        print("Auto-loading all active players on first visit...")
+        try:
+            MARKET_PROJECTIONS = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
+            save_projections(MARKET_PROJECTIONS)
+            print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
+        except Exception as e:
+            print(f"Error auto-loading players: {e}")
+    
+    # Get edges - only 70%+ probability by default
+    edges, streaks, high_prob_props, error = get_edges_data(show_only_70_plus=True)
     return render_template('index.html', edges=edges, streaks=streaks, high_prob_props=high_prob_props, projections=MARKET_PROJECTIONS, error=error)
 
 @app.route('/api/edges')
 def api_edges():
     """
     API endpoint that returns edges data as JSON for real-time updates.
+    Only returns 70%+ probability props by default.
     """
     global MARKET_PROJECTIONS
     MARKET_PROJECTIONS = load_projections()  # Reload in case it changed
-    edges, streaks, high_prob_props, error = get_edges_data()
+    
+    # Check if we should show all or just 70%+
+    show_all = request.args.get('show_all', 'false').lower() == 'true'
+    edges, streaks, high_prob_props, error = get_edges_data(show_only_70_plus=not show_all)
+    
     return jsonify({
         'edges': edges,
         'streaks': streaks,
         'high_prob_props': high_prob_props,
         'projections': MARKET_PROJECTIONS,
+        'total_players_loaded': len(MARKET_PROJECTIONS),
+        'showing_70_plus_only': not show_all,
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'error': error
     })

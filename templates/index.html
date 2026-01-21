@@ -10,7 +10,8 @@
     <div class="container">
         <header>
             <h1>THE ORACLE</h1>
-            <p class="subtitle">Sharp angles. No fluff. Pure edge.</p>
+            <p class="subtitle">Sharp angles. No fluff. Pure edge. | Showing 70%+ probability props only</p>
+            <p class="player-count">Loaded: <span id="totalPlayers">{{ projections|length }}</span> active players | Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)</p>
         </header>
 
         {% if error %}
@@ -27,6 +28,10 @@
             </label>
             <button onclick="loadAllActivePlayers()" class="load-players-btn" id="loadPlayersBtn">📥 Load All Active Players</button>
             <button onclick="showLineManagement()" class="line-mgmt-btn" id="lineMgmtBtn">📊 Line Management</button>
+            <label class="filter-toggle">
+                <input type="checkbox" id="showAllToggle" onchange="toggleShowAll()">
+                <span>Show All Edges (not just 70%+)</span>
+            </label>
         </div>
 
         <div id="loadProgress" class="load-progress" style="display: none;">
@@ -103,7 +108,8 @@
         <div id="edgesContainer">
             {% if edges %}
                 <div class="edges-section">
-                    <h2>EDGES (<span id="edgeCount">{{ edges|length }}</span>)</h2>
+                    <h2>70%+ PROBABILITY PROPS (<span id="edgeCount">{{ edges|length }}</span>)</h2>
+                    <p class="section-subtitle">Only showing props with 70%+ hit probability from all active NBA players</p>
                     <div class="edges-grid" id="edgesGrid">
                         {% for edge in edges %}
                         <div class="oracle-card {{ edge.recommendation|lower }}">
@@ -378,14 +384,22 @@
                 return;
             }
 
+            // Update player count
+            const totalPlayersEl = document.getElementById('totalPlayers');
+            const filteredCountEl = document.getElementById('filteredCount');
+            if (totalPlayersEl) totalPlayersEl.textContent = data.total_players_loaded || 0;
+            if (filteredCountEl) filteredCountEl.textContent = data.edges?.length || 0;
+            
             // Update edges
             const edgesContainer = document.getElementById('edgesContainer');
             const edges = data.edges || [];
+            const showing70Plus = data.showing_70_plus_only !== false;
             
             if (edges.length > 0) {
                 edgesContainer.innerHTML = `
                     <div class="edges-section">
-                        <h2>EDGES (<span id="edgeCount">${edges.length}</span>)</h2>
+                        <h2>${showing70Plus ? '70%+ PROBABILITY PROPS' : 'ALL EDGES'} (<span id="edgeCount">${edges.length}</span>)</h2>
+                        ${showing70Plus ? '<p class="section-subtitle">Only showing props with 70%+ hit probability from all active NBA players</p>' : '<p class="section-subtitle">Showing all edges (including below 70%)</p>'}
                         <div class="edges-grid" id="edgesGrid">
                             ${edges.map(edge => {
                                 const streakBadge = edge.streak && edge.streak.active 
@@ -721,12 +735,15 @@
         async function refreshData() {
             const refreshBtn = document.getElementById('refreshBtn');
             const loadingIndicator = document.getElementById('loadingIndicator');
+            const showAllToggle = document.getElementById('showAllToggle');
+            const showAll = showAllToggle ? showAllToggle.checked : false;
             
             refreshBtn.disabled = true;
             loadingIndicator.style.display = 'inline';
             
             try {
-                const response = await fetch('/api/edges');
+                const url = showAll ? '/api/edges?show_all=true' : '/api/edges';
+                const response = await fetch(url);
                 const data = await response.json();
                 updatePage(data);
             } catch (error) {
@@ -736,6 +753,10 @@
                 refreshBtn.disabled = false;
                 loadingIndicator.style.display = 'none';
             }
+        }
+
+        function toggleShowAll() {
+            refreshData();
         }
 
         function toggleAutoRefresh() {
