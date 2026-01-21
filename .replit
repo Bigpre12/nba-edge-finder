@@ -1,0 +1,17 @@
+language = "python3"
+run = "python app.py"
+
+[deploy]
+run = ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:5000"]
+
+[env]
+PYTHONPATH = "${PYTHONPATH}:."
+
+[packager]
+language = "python3"
+ignoredPackages = ["unit_tests"]
+
+[packager.features]
+packageSearch = true
+guessImports = true
+enabledForHosting = false
