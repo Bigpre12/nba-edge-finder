@@ -207,9 +207,16 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         
         track_line_changes(MARKET_PROJECTIONS)
         
-        result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, stat_type=stat_type, include_streaks=True, min_streak=2, include_factors=True)
-        all_edges = result.get('edges', [])
-        streaks = result.get('streaks', [])
+        try:
+            result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, stat_type=stat_type, include_streaks=True, min_streak=2, include_factors=True)
+            all_edges = result.get('edges', []) if result else []
+            streaks = result.get('streaks', []) if result else []
+        except Exception as e:
+            print(f"Error in check_for_edges: {e}")
+            import traceback
+            traceback.print_exc()
+            all_edges = []
+            streaks = []
         
         # Calculate probability and enhance with analytics for each edge
         edges = []
@@ -224,16 +231,23 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
             edges.append(edge)
         
         # Apply tactical filters
-        filter_dict = {
-            'min_probability': min_probability,
-            'min_ev': min_ev,
-            'min_market_edge': min_market_edge,
-            'min_grade': min_grade,
-            'positive_ev_only': positive_ev_only,
-            'exclude_injuries': exclude_injuries,
-            'exclude_rotation_changes': exclude_rotation
-        }
-        filtered_edges = apply_tactical_filters(edges, filter_dict)
+        try:
+            filter_dict = {
+                'min_probability': min_probability,
+                'min_ev': min_ev,
+                'min_market_edge': min_market_edge,
+                'min_grade': min_grade,
+                'positive_ev_only': positive_ev_only,
+                'exclude_injuries': exclude_injuries,
+                'exclude_rotation_changes': exclude_rotation
+            }
+            filtered_edges = apply_tactical_filters(edges, filter_dict) if edges else []
+        except Exception as e:
+            print(f"Error applying tactical filters: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fallback to unfiltered edges if filtering fails
+            filtered_edges = edges
         
         # Filter to 70%+ if requested (but respect min_probability if higher)
         if show_only_70_plus:
