@@ -53,11 +53,13 @@ def save_projections(projections):
 
 # Load projections on startup (lazy load to avoid blocking)
 MARKET_PROJECTIONS = {}
+_projections_loaded = False
 def get_market_projections():
     """Lazy load projections to avoid blocking startup."""
-    global MARKET_PROJECTIONS
-    if not MARKET_PROJECTIONS:
-        MARKET_PROJECTIONS = get_market_projections()
+    global MARKET_PROJECTIONS, _projections_loaded
+    if not _projections_loaded:
+        MARKET_PROJECTIONS = load_projections()
+        _projections_loaded = True
     return MARKET_PROJECTIONS
 
 # Initialize scheduler for daily updates (only start if not already running)
