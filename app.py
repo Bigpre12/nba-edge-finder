@@ -62,11 +62,18 @@ def load_projections():
 def save_projections(projections):
     """Save projections to file."""
     try:
+        if not projections or len(projections) == 0:
+            print("⚠️ Warning: Attempted to save empty projections")
+            return False
+        
         with open(PROJECTIONS_FILE, 'w') as f:
             json.dump(projections, f, indent=2)
+        print(f"💾 Saved {len(projections)} players to {PROJECTIONS_FILE}")
         return True
     except Exception as e:
-        print(f"Error saving projections: {e}")
+        print(f"❌ Error saving projections: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 # Load projections on startup (lazy load to avoid blocking)
@@ -241,24 +248,30 @@ def index():
         # Do this in background to avoid blocking startup
         if len(MARKET_PROJECTIONS) <= 3:  # Only default players
             import threading
+            import time
             def background_load():
                 print("Auto-loading all active players in background...")
                 try:
+                    # Load for PTS first (most common)
                     new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
                     if new_projections and len(new_projections) > 3:
                         save_projections(new_projections)
                         global MARKET_PROJECTIONS
                         MARKET_PROJECTIONS = new_projections
-                        print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
+                        print(f"✅ Successfully loaded {len(MARKET_PROJECTIONS)} active players for PTS")
+                        print(f"   Players loaded: {', '.join(list(new_projections.keys())[:10])}...")
                     else:
-                        print(f"Warning: Only loaded {len(new_projections) if new_projections else 0} players")
+                        print(f"⚠️ Warning: Only loaded {len(new_projections) if new_projections else 0} players")
+                        print("   This might be due to NBA API rate limits or network issues.")
                 except Exception as e:
-                    print(f"Error auto-loading players: {e}")
+                    print(f"❌ Error auto-loading players: {e}")
                     import traceback
                     traceback.print_exc()
             
             # Start in background thread, don't wait
-            threading.Thread(target=background_load, daemon=True).start()
+            load_thread = threading.Thread(target=background_load, daemon=True)
+            load_thread.start()
+            print(f"🚀 Started background thread to load all active players...")
         
         # Get selected stat type from request or default to PTS
         stat_type = request.args.get('stat_type', 'PTS')

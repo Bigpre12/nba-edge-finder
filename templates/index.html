@@ -30,7 +30,13 @@
                 </select>
                 <span class="stat-description" id="statDescription">{{ stat_categories.get(current_stat_type, {}).get('description', '') if stat_categories else '' }}</span>
             </div>
-            <p class="player-count">Loaded: <span id="totalPlayers">{{ projections|length }}</span> active players | Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)</p>
+            <p class="player-count">
+                Loaded: <span id="totalPlayers" style="color: {% if projections|length > 3 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ projections|length }}</span> active players | 
+                Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)
+                {% if projections|length <= 3 %}
+                <br><span style="color: #f39c12; font-size: 0.9em;">⚠️ Only {{ projections|length }} players loaded. Click "Load All Active Players" to load more.</span>
+                {% endif %}
+            </p>
         </header>
 
         {% if error %}

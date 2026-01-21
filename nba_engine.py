@@ -235,28 +235,43 @@ def generate_projections_from_active_players(stat_type='PTS', season='2023-24', 
     active_players = get_all_active_players()
     projections = {}
     
-    print(f"Fetching projections for {len(active_players)} active players...")
+    print(f"📊 Fetching projections for {len(active_players)} active players (stat: {stat_type})...")
+    
+    successful = 0
+    failed = 0
     
     for i, player in enumerate(active_players):
         player_name = player['full_name']
         player_id = player['id']
         
-        # Get season average as projection
-        # For combination stats, get_season_average handles it
-        avg = get_season_average(player_id, stat_type=stat_type, season=season)
-        
-        if avg is not None:
-            # Use season average as the projection line
-            projections[player_name] = round(avg, 1)
+        try:
+            # Get season average as projection
+            # For combination stats, get_season_average handles it
+            avg = get_season_average(player_id, stat_type=stat_type, season=season)
+            
+            if avg is not None:
+                # Use season average as the projection line
+                projections[player_name] = round(avg, 1)
+                successful += 1
+            else:
+                failed += 1
+        except Exception as e:
+            print(f"   ⚠️ Error getting {player_name}: {e}")
+            failed += 1
+            continue
         
         # Rate limiting - be more conservative with bulk operations
         if (i + 1) % 10 == 0:
-            print(f"Processed {i + 1}/{len(active_players)} players...")
+            print(f"   📈 Progress: {i + 1}/{len(active_players)} players processed ({successful} successful, {failed} failed)...")
             time.sleep(2)  # Longer delay every 10 players
         else:
             time.sleep(0.5)  # Shorter delay between players
     
-    print(f"Generated projections for {len(projections)} players")
+    print(f"✅ Generated projections for {len(projections)} players ({successful} successful, {failed} failed)")
+    if len(projections) < 10:
+        print(f"⚠️ WARNING: Only {len(projections)} players loaded. This is unusually low.")
+        print(f"   Check NBA API availability and network connection.")
+    
     return projections
 
 def get_player_performance_factors(player_name, stat_type='PTS', season='2023-24'):
