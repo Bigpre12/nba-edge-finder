@@ -169,15 +169,25 @@ def init_scheduler():
         print(f"Warning: Could not initialize scheduler: {e}")
         print("Daily updates will not run automatically, but app will still work")
 
-def get_edges_data(show_only_70_plus=True, stat_type='PTS'):
+def get_edges_data(show_only_70_plus=True, stat_type='PTS', 
+                   sort_by='ev', min_probability=70.0, min_ev=0.0, min_market_edge=0.0,
+                   min_grade=None, positive_ev_only=False, exclude_injuries=False, exclude_rotation=False):
     """
-    Helper function to fetch edges data.
+    Helper function to fetch edges data with filtering and sorting.
     Only returns 70%+ probability props by default.
     Uses caching to improve performance.
     
     Args:
         show_only_70_plus: Filter to 70%+ probability props
         stat_type: Stat category to analyze (default: 'PTS')
+        sort_by: Sort method ('ev', 'market_edge', 'probability', 'grade', 'edge', 'kelly')
+        min_probability: Minimum hit probability (default: 70.0)
+        min_ev: Minimum expected value (default: 0.0)
+        min_market_edge: Minimum market edge percentage (default: 0.0)
+        min_grade: Minimum grade (e.g., 'B', 'A', 'A+') or None
+        positive_ev_only: Only show positive EV bets
+        exclude_injuries: Exclude players with injury risks
+        exclude_rotation: Exclude players with rotation changes
     """
     try:
         # Clear old cache periodically (every 10 calls)
@@ -213,18 +223,47 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS'):
             edge = enhance_edge_with_analytics(edge, default_odds=-110)
             edges.append(edge)
         
-        # Filter to 70%+ if requested
-        if show_only_70_plus:
-            edges = [e for e in edges if e.get('probability', 0) >= 70.0]
+        # Apply tactical filters
+        filtered_edges = apply_tactical_filters(
+            edges,
+            min_probability=min_probability,
+            min_ev=min_ev,
+            min_market_edge=min_market_edge,
+            min_grade=min_grade,
+            positive_ev_only=positive_ev_only,
+            exclude_injuries=exclude_injuries,
+            exclude_rotation=exclude_rotation
+        )
         
-        # Default sort by EV (highest first)
-        edges = sort_edges_by_ev(edges, reverse=True)
+        # Filter to 70%+ if requested (but respect min_probability if higher)
+        if show_only_70_plus:
+            min_prob = max(70.0, min_probability)
+            filtered_edges = [e for e in filtered_edges if e.get('probability', 0) >= min_prob]
+        else:
+            filtered_edges = [e for e in filtered_edges if e.get('probability', 0) >= min_probability]
+        
+        # Apply sorting
+        if sort_by == 'ev':
+            filtered_edges = sort_edges_by_ev(filtered_edges, reverse=True)
+        elif sort_by == 'market_edge':
+            filtered_edges = sort_edges_by_market_edge(filtered_edges, reverse=True)
+        elif sort_by == 'probability':
+            filtered_edges.sort(key=lambda x: x.get('probability', 0), reverse=True)
+        elif sort_by == 'grade':
+            filtered_edges = sort_edges_by_grade(filtered_edges, reverse=True)
+        elif sort_by == 'edge':
+            filtered_edges.sort(key=lambda x: abs(x.get('difference', 0)), reverse=True)
+        elif sort_by == 'kelly':
+            filtered_edges.sort(key=lambda x: x.get('analytics', {}).get('kelly_fraction', 0), reverse=True)
+        else:
+            # Default sort by EV
+            filtered_edges = sort_edges_by_ev(filtered_edges, reverse=True)
         
         # Sort streaks by streak count (longest first)
         streaks.sort(key=lambda x: x.get('streak_count', 0), reverse=True)
         
         # Filter for 70%+ probability props (for high prob section)
-        high_prob_props = filter_high_probability_props(edges, min_probability=70.0)
+        high_prob_props = filter_high_probability_props(filtered_edges, min_probability=70.0)
         
         # Generate parlay recommendations
         try:
@@ -233,7 +272,7 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS'):
             print(f"Error generating parlay recommendations: {e}")
             parlay_recommendations = {}
         
-        return edges, streaks, high_prob_props, parlay_recommendations, None
+        return filtered_edges, streaks, high_prob_props, parlay_recommendations, None
     except Exception as e:
         error_message = f"Error fetching edges: {str(e)}"
         import traceback
@@ -356,7 +395,7 @@ def index():
 def api_edges():
     """
     API endpoint that returns edges data as JSON for real-time updates.
-    Only returns 70%+ probability props by default.
+    Supports filtering and sorting via query parameters.
     """
     global MARKET_PROJECTIONS
     MARKET_PROJECTIONS = load_projections()  # Reload in case it changed
@@ -372,8 +411,30 @@ def api_edges():
     
     # Check if we should show all or just 70%+
     show_all = request.args.get('show_all', 'false').lower() == 'true'
+    
+    # Get filter parameters
+    sort_by = request.args.get('sort_by', 'ev')
+    min_probability = float(request.args.get('min_probability', 70.0))
+    min_ev = float(request.args.get('min_ev', 0.0))
+    min_market_edge = float(request.args.get('min_market_edge', 0.0))
+    min_grade = request.args.get('min_grade') or None
+    positive_ev_only = request.args.get('positive_ev_only', 'false').lower() == 'true'
+    exclude_injuries = request.args.get('exclude_injuries', 'false').lower() == 'true'
+    exclude_rotation = request.args.get('exclude_rotation', 'false').lower() == 'true'
+    
     try:
-        edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=not show_all, stat_type=stat_type)
+        edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(
+            show_only_70_plus=not show_all,
+            stat_type=stat_type,
+            sort_by=sort_by,
+            min_probability=min_probability,
+            min_ev=min_ev,
+            min_market_edge=min_market_edge,
+            min_grade=min_grade,
+            positive_ev_only=positive_ev_only,
+            exclude_injuries=exclude_injuries,
+            exclude_rotation=exclude_rotation
+        )
     except Exception as e:
         import traceback
         traceback.print_exc()

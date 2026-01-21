@@ -968,6 +968,66 @@
         let refreshTimeout = null;
         let isRefreshing = false;
         
+        function buildFilterParams() {
+            const params = new URLSearchParams();
+            
+            // Stat type
+            const statTypeSelect = document.getElementById('statTypeSelect');
+            if (statTypeSelect) {
+                params.append('stat_type', statTypeSelect.value);
+            }
+            
+            // Show all toggle
+            const showAllToggle = document.getElementById('showAllToggle');
+            if (showAllToggle && showAllToggle.checked) {
+                params.append('show_all', 'true');
+            }
+            
+            // Sort by
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect) {
+                params.append('sort_by', sortSelect.value);
+            }
+            
+            // Filters
+            const minProbFilter = document.getElementById('minProbFilter');
+            if (minProbFilter) {
+                params.append('min_probability', minProbFilter.value);
+            }
+            
+            const minEvFilter = document.getElementById('minEvFilter');
+            if (minEvFilter) {
+                params.append('min_ev', minEvFilter.value);
+            }
+            
+            const minEdgeFilter = document.getElementById('minEdgeFilter');
+            if (minEdgeFilter) {
+                params.append('min_market_edge', minEdgeFilter.value);
+            }
+            
+            const minGradeFilter = document.getElementById('minGradeFilter');
+            if (minGradeFilter && minGradeFilter.value) {
+                params.append('min_grade', minGradeFilter.value);
+            }
+            
+            const positiveEvOnly = document.getElementById('positiveEvOnly');
+            if (positiveEvOnly && positiveEvOnly.checked) {
+                params.append('positive_ev_only', 'true');
+            }
+            
+            const excludeInjuries = document.getElementById('excludeInjuries');
+            if (excludeInjuries && excludeInjuries.checked) {
+                params.append('exclude_injuries', 'true');
+            }
+            
+            const excludeRotation = document.getElementById('excludeRotation');
+            if (excludeRotation && excludeRotation.checked) {
+                params.append('exclude_rotation', 'true');
+            }
+            
+            return params.toString();
+        }
+
         async function refreshData() {
             // Debounce: prevent multiple simultaneous refreshes
             if (isRefreshing) {
@@ -1343,6 +1403,71 @@
             } catch (error) {
                 console.error('Error loading update status:', error);
             }
+        }
+
+        // Tactical Filters Functions
+        function showTacticalFilters() {
+            document.getElementById('tacticalFiltersPanel').style.display = 'block';
+        }
+
+        function hideTacticalFilters() {
+            document.getElementById('tacticalFiltersPanel').style.display = 'none';
+            // Apply filters when closing
+            refreshData();
+        }
+
+        function applyFilters() {
+            // Refresh data with current filter settings
+            refreshData();
+        }
+
+        function resetFilters() {
+            // Reset all filter inputs to defaults
+            const minProbFilter = document.getElementById('minProbFilter');
+            if (minProbFilter) {
+                minProbFilter.value = 70;
+                document.getElementById('probValue').textContent = '70';
+            }
+            
+            const minEvFilter = document.getElementById('minEvFilter');
+            if (minEvFilter) {
+                minEvFilter.value = 0;
+                document.getElementById('evValue').textContent = '0';
+            }
+            
+            const minEdgeFilter = document.getElementById('minEdgeFilter');
+            if (minEdgeFilter) {
+                minEdgeFilter.value = 0;
+                document.getElementById('edgeValue').textContent = '0';
+            }
+            
+            const minGradeFilter = document.getElementById('minGradeFilter');
+            if (minGradeFilter) {
+                minGradeFilter.value = 'B';
+            }
+            
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect) {
+                sortSelect.value = 'ev';
+            }
+            
+            const positiveEvOnly = document.getElementById('positiveEvOnly');
+            if (positiveEvOnly) {
+                positiveEvOnly.checked = false;
+            }
+            
+            const excludeInjuries = document.getElementById('excludeInjuries');
+            if (excludeInjuries) {
+                excludeInjuries.checked = false;
+            }
+            
+            const excludeRotation = document.getElementById('excludeRotation');
+            if (excludeRotation) {
+                excludeRotation.checked = false;
+            }
+            
+            // Apply reset filters
+            refreshData();
         }
 
         // Initial load timestamp
