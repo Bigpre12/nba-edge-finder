@@ -146,11 +146,15 @@ def init_scheduler():
         print(f"Warning: Could not initialize scheduler: {e}")
         print("Daily updates will not run automatically, but app will still work")
 
-def get_edges_data(show_only_70_plus=True):
+def get_edges_data(show_only_70_plus=True, stat_type='PTS'):
     """
     Helper function to fetch edges data.
     Only returns 70%+ probability props by default.
     Uses caching to improve performance.
+    
+    Args:
+        show_only_70_plus: Filter to 70%+ probability props
+        stat_type: Stat category to analyze (default: 'PTS')
     """
     try:
         # Clear old cache periodically (every 10 calls)
@@ -164,7 +168,7 @@ def get_edges_data(show_only_70_plus=True):
         MARKET_PROJECTIONS = get_market_projections()
         track_line_changes(MARKET_PROJECTIONS)
         
-        result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, include_streaks=True, min_streak=2, include_factors=True)
+        result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, stat_type=stat_type, include_streaks=True, min_streak=2, include_factors=True)
         all_edges = result.get('edges', [])
         streaks = result.get('streaks', [])
         
@@ -193,9 +197,18 @@ def get_edges_data(show_only_70_plus=True):
         # Filter for 70%+ probability props (for high prob section)
         high_prob_props = filter_high_probability_props(edges, min_probability=70.0)
         
+        # Generate parlay recommendations
+        try:
+            parlay_recommendations = recommend_parlays(high_prob_props)
+        except Exception as e:
+            print(f"Error generating parlay recommendations: {e}")
+            parlay_recommendations = {}
+        
         return edges, streaks, high_prob_props, parlay_recommendations, None
     except Exception as e:
         error_message = f"Error fetching edges: {str(e)}"
+        import traceback
+        traceback.print_exc()
         return [], [], [], {}, error_message
 
 @app.route('/health')
@@ -227,12 +240,17 @@ def index():
                 print("Auto-loading all active players in background...")
                 try:
                     new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
-                    save_projections(new_projections)
-                    global MARKET_PROJECTIONS
-                    MARKET_PROJECTIONS = new_projections
-                    print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
+                    if new_projections and len(new_projections) > 3:
+                        save_projections(new_projections)
+                        global MARKET_PROJECTIONS
+                        MARKET_PROJECTIONS = new_projections
+                        print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
+                    else:
+                        print(f"Warning: Only loaded {len(new_projections) if new_projections else 0} players")
                 except Exception as e:
                     print(f"Error auto-loading players: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             # Start in background thread, don't wait
             threading.Thread(target=background_load, daemon=True).start()
