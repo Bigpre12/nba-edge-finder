@@ -5,10 +5,17 @@ from line_tracker import (
     track_line_changes, get_line_changes, add_to_chase_list, get_chase_list,
     remove_from_chase_list, add_alt_line, get_alt_lines, update_line
 )
-from apscheduler.schedulers.background import BackgroundScheduler
 import json
 import os
 import atexit
+
+# Try to import scheduler, but don't fail if it's not available
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    SCHEDULER_AVAILABLE = True
+except ImportError:
+    SCHEDULER_AVAILABLE = False
+    print("Warning: APScheduler not available. Scheduled updates disabled.")
 
 app = Flask(__name__)
 
@@ -46,52 +53,75 @@ def save_projections(projections):
 # Load projections on startup
 MARKET_PROJECTIONS = load_projections()
 
-# Initialize scheduler for daily updates
-scheduler = BackgroundScheduler()
-scheduler.start()
+# Initialize scheduler for daily updates (only start if not already running)
+scheduler = None
 
-def daily_update_job():
-    """Run daily update at 8am - load all active players and refresh edges."""
-    global MARKET_PROJECTIONS
-    print(f"[{datetime.now()}] Running daily update at 8am...")
+def init_scheduler():
+    """Initialize and start the scheduler."""
+    global scheduler
+    if not SCHEDULER_AVAILABLE:
+        print("Scheduler not available - skipping initialization")
+        return
     
     try:
-        # Auto-load all active players and generate projections
-        print("Loading all active NBA players...")
-        new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
-        
-        # Track line changes before updating
-        old_projections = load_projections()
-        changes = track_line_changes(new_projections)
-        if changes:
-            print(f"Line changes detected: {len(changes)} players")
-            for player, change in changes.items():
-                print(f"  {player}: {change['previous']} → {change['current']} ({change['direction']})")
-        
-        # Save new projections
-        MARKET_PROJECTIONS = new_projections
-        save_projections(MARKET_PROJECTIONS)
-        
-        # Refresh edges data (pre-cache for faster access)
-        get_edges_data()
-        
-        print(f"Daily update complete! Loaded {len(MARKET_PROJECTIONS)} active players.")
+        if scheduler is None or (hasattr(scheduler, 'running') and not scheduler.running):
+            scheduler = BackgroundScheduler(daemon=True)
+            scheduler.start()
+            
+            def daily_update_job():
+                """Run daily update at 8am - load all active players and refresh edges."""
+                global MARKET_PROJECTIONS
+                print(f"[{datetime.now()}] Running daily update at 8am...")
+                
+                try:
+                    # Auto-load all active players and generate projections
+                    print("Loading all active NBA players...")
+                    new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
+                    
+                    # Track line changes before updating
+                    old_projections = load_projections()
+                    changes = track_line_changes(new_projections)
+                    if changes:
+                        print(f"Line changes detected: {len(changes)} players")
+                        for player, change in changes.items():
+                            print(f"  {player}: {change['previous']} → {change['current']} ({change['direction']})")
+                    
+                    # Save new projections
+                    MARKET_PROJECTIONS = new_projections
+                    save_projections(MARKET_PROJECTIONS)
+                    
+                    # Refresh edges data (pre-cache for faster access)
+                    get_edges_data()
+                    
+                    print(f"Daily update complete! Loaded {len(MARKET_PROJECTIONS)} active players.")
+                except Exception as e:
+                    print(f"Error in daily update: {e}")
+            
+            # Schedule daily update at 8am
+            scheduler.add_job(
+                func=daily_update_job,
+                trigger="cron",
+                hour=8,
+                minute=0,
+                id='daily_update',
+                name='Daily 8am Update',
+                replace_existing=True
+            )
+            
+            # Shut down scheduler on app exit
+            atexit.register(lambda: scheduler.shutdown() if scheduler and hasattr(scheduler, 'shutdown') else None)
+            print("Scheduler initialized successfully")
     except Exception as e:
-        print(f"Error in daily update: {e}")
+        print(f"Warning: Could not initialize scheduler: {e}")
+        print("Daily updates will not run automatically, but app will still work")
 
-# Schedule daily update at 8am
-scheduler.add_job(
-    func=daily_update_job,
-    trigger="cron",
-    hour=8,
-    minute=0,
-    id='daily_update',
-    name='Daily 8am Update',
-    replace_existing=True
-)
-
-# Shut down scheduler on app exit
-atexit.register(lambda: scheduler.shutdown())
+# Initialize scheduler (with error handling) - only in production
+if __name__ != '__main__':
+    try:
+        init_scheduler()
+    except Exception as e:
+        print(f"Warning: Scheduler initialization failed: {e}")
+        print("App will continue without scheduled updates")
 
 def get_edges_data(show_only_70_plus=True):
     """
@@ -375,26 +405,63 @@ def api_update_line():
 @app.route('/api/daily-update-status')
 def api_daily_update_status():
     """Get status of daily update scheduler."""
-    jobs = scheduler.get_jobs()
-    daily_job = next((job for job in jobs if job.id == 'daily_update'), None)
-    
-    status = {
-        'scheduler_running': scheduler.running,
-        'daily_update_scheduled': daily_job is not None,
-        'next_run': daily_job.next_run_time.isoformat() if daily_job and daily_job.next_run_time else None,
-        'last_update': None  # Could track this in a file
-    }
+    global scheduler
+    try:
+        if scheduler and hasattr(scheduler, 'running') and scheduler.running:
+            jobs = scheduler.get_jobs()
+            daily_job = next((job for job in jobs if job.id == 'daily_update'), None)
+            
+            status = {
+                'scheduler_running': True,
+                'daily_update_scheduled': daily_job is not None,
+                'next_run': daily_job.next_run_time.isoformat() if daily_job and daily_job.next_run_time else None,
+                'last_update': None
+            }
+        else:
+            status = {
+                'scheduler_running': False,
+                'daily_update_scheduled': False,
+                'next_run': None,
+                'last_update': None,
+                'note': 'Scheduler not initialized or not available'
+            }
+    except Exception as e:
+        status = {
+            'scheduler_running': False,
+            'daily_update_scheduled': False,
+            'next_run': None,
+            'error': str(e)
+        }
     
     return jsonify(status)
 
 @app.route('/api/trigger-update', methods=['POST'])
 def api_trigger_update():
     """Manually trigger daily update."""
+    global MARKET_PROJECTIONS
     try:
-        daily_update_job()
+        print(f"[{datetime.now()}] Manual update triggered...")
+        
+        # Auto-load all active players and generate projections
+        print("Loading all active NBA players...")
+        new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
+        
+        # Track line changes before updating
+        old_projections = load_projections()
+        changes = track_line_changes(new_projections)
+        if changes:
+            print(f"Line changes detected: {len(changes)} players")
+        
+        # Save new projections
+        MARKET_PROJECTIONS = new_projections
+        save_projections(MARKET_PROJECTIONS)
+        
+        # Refresh edges data
+        get_edges_data()
+        
         return jsonify({
             'success': True,
-            'message': 'Update triggered successfully',
+            'message': f'Update triggered successfully. Loaded {len(MARKET_PROJECTIONS)} players.',
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
@@ -405,7 +472,16 @@ def api_trigger_update():
 
 if __name__ == '__main__':
     # Development mode
+    try:
+        init_scheduler()
+    except Exception as e:
+        print(f"Warning: Scheduler initialization failed: {e}")
     app.run(debug=True, host='0.0.0.0', port=5000)
 else:
     # Production mode - disable debug
     app.config['DEBUG'] = False
+    # Initialize scheduler for production (already done above, but ensure it's called)
+    try:
+        init_scheduler()
+    except Exception as e:
+        print(f"Warning: Scheduler initialization failed: {e}")
