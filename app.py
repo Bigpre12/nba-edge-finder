@@ -5,6 +5,7 @@ from line_tracker import (
     track_line_changes, get_line_changes, add_to_chase_list, get_chase_list,
     remove_from_chase_list, add_alt_line, get_alt_lines, update_line
 )
+from auth import requires_auth
 import json
 import os
 import atexit
@@ -176,15 +177,16 @@ def get_edges_data(show_only_70_plus=True):
 
 @app.route('/health')
 def health():
-    """Health check endpoint for deployment platforms."""
+    """Health check endpoint for deployment platforms - no auth required."""
     return jsonify({'status': 'ok', 'message': 'App is running'}), 200
 
 @app.route('/ping')
 def ping():
-    """Simple ping endpoint for quick health checks."""
+    """Simple ping endpoint for quick health checks - no auth required."""
     return 'pong', 200
 
 @app.route('/')
+@requires_auth
 def index():
     """
     Main route that displays NBA betting edges.
@@ -194,20 +196,30 @@ def index():
     MARKET_PROJECTIONS = load_projections()  # Reload from file
     
     # Auto-load all active players if projections file is empty or has default values
+    # Do this in background to avoid blocking startup
     if len(MARKET_PROJECTIONS) <= 3:  # Only default players
-        print("Auto-loading all active players on first visit...")
-        try:
-            MARKET_PROJECTIONS = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
-            save_projections(MARKET_PROJECTIONS)
-            print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
-        except Exception as e:
-            print(f"Error auto-loading players: {e}")
+        import threading
+        def background_load():
+            print("Auto-loading all active players in background...")
+            try:
+                new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
+                save_projections(new_projections)
+                global MARKET_PROJECTIONS
+                MARKET_PROJECTIONS = new_projections
+                print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
+            except Exception as e:
+                print(f"Error auto-loading players: {e}")
+        
+        # Start in background thread, don't wait
+        threading.Thread(target=background_load, daemon=True).start()
     
     # Get edges - only 70%+ probability by default
+    # This will work even if players are still loading
     edges, streaks, high_prob_props, error = get_edges_data(show_only_70_plus=True)
     return render_template('index.html', edges=edges, streaks=streaks, high_prob_props=high_prob_props, projections=MARKET_PROJECTIONS, error=error)
 
 @app.route('/api/edges')
+@requires_auth
 def api_edges():
     """
     API endpoint that returns edges data as JSON for real-time updates.
@@ -232,6 +244,7 @@ def api_edges():
     })
 
 @app.route('/api/active-players')
+@requires_auth
 def api_active_players():
     """
     API endpoint that returns all active NBA players.
@@ -246,6 +259,7 @@ def api_active_players():
         return jsonify({'error': str(e), 'players': [], 'count': 0}), 500
 
 @app.route('/api/load-all-players', methods=['POST'])
+@requires_auth
 def api_load_all_players():
     """
     API endpoint to generate projections for all active players.
@@ -284,6 +298,7 @@ def api_load_all_players():
         }), 500
 
 @app.route('/api/projections', methods=['GET', 'POST'])
+@requires_auth
 def api_projections():
     """
     API endpoint to get or update projections.
@@ -312,6 +327,7 @@ def api_projections():
     })
 
 @app.route('/api/line-changes')
+@requires_auth
 def api_line_changes():
     """Get line changes since last update."""
     global MARKET_PROJECTIONS
@@ -324,6 +340,7 @@ def api_line_changes():
     })
 
 @app.route('/api/chase-list', methods=['GET', 'POST', 'DELETE'])
+@requires_auth
 def api_chase_list():
     """Manage chase list - props to track/follow."""
     if request.method == 'POST':
@@ -354,6 +371,7 @@ def api_chase_list():
     })
 
 @app.route('/api/alt-lines', methods=['GET', 'POST'])
+@requires_auth
 def api_alt_lines():
     """Manage alternative lines."""
     if request.method == 'POST':
@@ -379,6 +397,7 @@ def api_alt_lines():
     })
 
 @app.route('/api/update-line', methods=['POST'])
+@requires_auth
 def api_update_line():
     """Update a line even after it's been sent off."""
     global MARKET_PROJECTIONS
@@ -405,6 +424,7 @@ def api_update_line():
     })
 
 @app.route('/api/daily-update-status')
+@requires_auth
 def api_daily_update_status():
     """Get status of daily update scheduler."""
     global scheduler
@@ -438,6 +458,7 @@ def api_daily_update_status():
     return jsonify(status)
 
 @app.route('/api/trigger-update', methods=['POST'])
+@requires_auth
 def api_trigger_update():
     """Manually trigger daily update."""
     global MARKET_PROJECTIONS
