@@ -326,14 +326,29 @@ def api_edges():
     global MARKET_PROJECTIONS
     MARKET_PROJECTIONS = load_projections()  # Reload in case it changed
     
+    # Get selected stat type
+    stat_type = request.args.get('stat_type', 'PTS')
+    try:
+        if not is_valid_stat_type(stat_type):
+            stat_type = 'PTS'
+    except Exception as e:
+        print(f"Error validating stat type in API: {e}")
+        stat_type = 'PTS'
+    
     # Check if we should show all or just 70%+
     show_all = request.args.get('show_all', 'false').lower() == 'true'
-    edges, streaks, high_prob_props, error = get_edges_data(show_only_70_plus=not show_all)
+    try:
+        edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=not show_all, stat_type=stat_type)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        edges, streaks, high_prob_props, parlay_recommendations, error = [], [], [], {}, f"Error: {str(e)}"
     
     return jsonify({
         'edges': edges,
         'streaks': streaks,
         'high_prob_props': high_prob_props,
+        'parlay_recommendations': parlay_recommendations,
         'projections': MARKET_PROJECTIONS,
         'total_players_loaded': len(MARKET_PROJECTIONS),
         'showing_70_plus_only': not show_all,
