@@ -186,20 +186,6 @@ def get_edges_data(show_only_70_plus=True):
         # Sort streaks by streak count (longest first)
         streaks.sort(key=lambda x: x.get('streak_count', 0), reverse=True)
         
-        # Sort edges by factors (injuries/rotation changes first) if same probability
-        def sort_key(edge):
-            factors = edge.get('factors', {})
-            score = edge.get('probability', 0) * 10  # Probability is primary
-            if factors.get('injury_risk'):
-                score -= 50  # Penalize injuries
-            if factors.get('rotation_change'):
-                score -= 25  # Penalize rotation changes
-            if factors.get('recent_dnp'):
-                score -= 40  # Penalize recent DNP
-            return score
-        
-        edges.sort(key=sort_key, reverse=True)
-        
         # Filter for 70%+ probability props (for high prob section)
         high_prob_props = filter_high_probability_props(edges, min_probability=70.0)
         

@@ -603,7 +603,19 @@
                                     
                                     return `
                                     <div class="oracle-card ${edge.recommendation.toLowerCase()}">
-                                        <div class="oracle-player">${edge.player}</div>
+                                        <div class="oracle-header-row">
+                                            <div class="oracle-player">${edge.player}</div>
+                                            ${edge.ev ? `
+                                            <div class="ev-badge ${edge.ev.is_positive_ev ? 'positive-ev' : 'negative-ev'}">
+                                                EV: $${edge.ev.ev.toFixed(2)}
+                                            </div>
+                                            ` : ''}
+                                            ${edge.matchup_grade ? `
+                                            <div class="grade-badge grade-${edge.matchup_grade.grade.toLowerCase().replace('+', 'plus').replace('-', 'minus')}">
+                                                ${edge.matchup_grade.grade}
+                                            </div>
+                                            ` : ''}
+                                        </div>
                                         <div class="oracle-content">
                                             <div class="oracle-line"><strong>The Line:</strong> ${edge.oracle.verdict}</div>
                                             <div class="oracle-sharp"><strong>The Sharp Angle:</strong> ${edge.oracle.sharp_angle}</div>
