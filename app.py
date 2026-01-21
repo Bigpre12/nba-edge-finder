@@ -7,6 +7,7 @@ from line_tracker import (
 )
 from auth import requires_auth
 from cache_manager import clear_old_cache
+from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display
 import json
 import os
 import atexit
@@ -196,10 +197,10 @@ def get_edges_data(show_only_70_plus=True):
         # Filter for 70%+ probability props (for high prob section)
         high_prob_props = filter_high_probability_props(edges, min_probability=70.0)
         
-        return edges, streaks, high_prob_props, None
+        return edges, streaks, high_prob_props, parlay_recommendations, None
     except Exception as e:
         error_message = f"Error fetching edges: {str(e)}"
-        return [], [], [], error_message
+        return [], [], [], {}, error_message
 
 @app.route('/health')
 def health():
@@ -241,8 +242,8 @@ def index():
     
     # Get edges - only 70%+ probability by default
     # This will work even if players are still loading
-    edges, streaks, high_prob_props, error = get_edges_data(show_only_70_plus=True)
-    return render_template('index.html', edges=edges, streaks=streaks, high_prob_props=high_prob_props, projections=MARKET_PROJECTIONS, error=error)
+    edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True)
+    return render_template('index.html', edges=edges, streaks=streaks, high_prob_props=high_prob_props, parlay_recommendations=parlay_recommendations, projections=MARKET_PROJECTIONS, error=error)
 
 @app.route('/api/edges')
 @requires_auth
@@ -512,6 +513,33 @@ def api_trigger_update():
             'success': True,
             'message': f'Update triggered successfully. Loaded {len(MARKET_PROJECTIONS)} players.',
             'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/parlay-calculator', methods=['POST'])
+@requires_auth
+def api_parlay_calculator():
+    """Calculate parlay payout for custom bets."""
+    try:
+        data = request.get_json()
+        bets = data.get('bets', [])
+        odds_format = data.get('odds_format', 'american')
+        
+        if not bets or len(bets) < 2:
+            return jsonify({
+                'success': False,
+                'error': 'Parlay requires at least 2 bets'
+            }), 400
+        
+        payout_info = calculate_parlay_payout(bets, odds_format)
+        
+        return jsonify({
+            'success': True,
+            'payout': payout_info
         })
     except Exception as e:
         return jsonify({

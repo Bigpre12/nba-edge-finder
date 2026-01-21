@@ -28,6 +28,7 @@
             </label>
             <button onclick="loadAllActivePlayers()" class="load-players-btn" id="loadPlayersBtn">📥 Load All Active Players</button>
             <button onclick="showLineManagement()" class="line-mgmt-btn" id="lineMgmtBtn">📊 Line Management</button>
+            <button onclick="showParlayCalculator()" class="parlay-btn" id="parlayBtn">🎲 Parlay Calculator</button>
             <label class="filter-toggle">
                 <input type="checkbox" id="showAllToggle" onchange="toggleShowAll()">
                 <span>Show All Edges (not just 70%+)</span>
@@ -218,6 +219,57 @@
             {% endif %}
         </div>
 
+        <!-- Parlay Recommendations Section -->
+        <div id="parlaySection" class="parlay-section" style="display: none;">
+            <h2>🎲 PARLAY RECOMMENDATIONS</h2>
+            <p class="section-subtitle">Best parlay combinations based on 70%+ probability props</p>
+            
+            <div class="parlay-tabs">
+                <button class="parlay-tab active" onclick="showParlayTab('2-man')">2-Man</button>
+                <button class="parlay-tab" onclick="showParlayTab('3-man')">3-Man</button>
+                <button class="parlay-tab" onclick="showParlayTab('4-man')">4-Man</button>
+                <button class="parlay-tab" onclick="showParlayTab('6-man')">6-Man</button>
+            </div>
+            
+            <div id="parlay-2-man" class="parlay-tab-content active">
+                <h3>2-Man Parlays</h3>
+                <div id="parlay2ManContainer" class="parlay-container"></div>
+            </div>
+            <div id="parlay-3-man" class="parlay-tab-content">
+                <h3>3-Man Parlays</h3>
+                <div id="parlay3ManContainer" class="parlay-container"></div>
+            </div>
+            <div id="parlay-4-man" class="parlay-tab-content">
+                <h3>4-Man Parlays</h3>
+                <div id="parlay4ManContainer" class="parlay-container"></div>
+            </div>
+            <div id="parlay-6-man" class="parlay-tab-content">
+                <h3>6-Man Parlays</h3>
+                <div id="parlay6ManContainer" class="parlay-container"></div>
+            </div>
+        </div>
+
+        <!-- Parlay Calculator Modal -->
+        <div id="parlayCalculatorModal" class="parlay-modal" style="display: none;">
+            <div class="parlay-modal-content">
+                <div class="parlay-modal-header">
+                    <h2>🎲 Parlay Calculator</h2>
+                    <button onclick="hideParlayCalculator()" class="close-btn">✕</button>
+                </div>
+                <div class="parlay-calculator-body">
+                    <div class="calculator-inputs">
+                        <h3>Add Bets</h3>
+                        <div id="betsList"></div>
+                        <button onclick="addBetRow()" class="add-bet-btn">+ Add Bet</button>
+                        <div class="calculator-results">
+                            <h3>Parlay Results</h3>
+                            <div id="calculatorResults"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="highProbContainer">
             {% if high_prob_props %}
                 <div class="high-prob-section">
@@ -264,6 +316,57 @@
                     </div>
                 </div>
             {% endif %}
+        </div>
+
+        <!-- Parlay Recommendations Section -->
+        <div id="parlaySection" class="parlay-section" style="display: none;">
+            <h2>🎲 PARLAY RECOMMENDATIONS</h2>
+            <p class="section-subtitle">Best parlay combinations based on 70%+ probability props</p>
+            
+            <div class="parlay-tabs">
+                <button class="parlay-tab active" onclick="showParlayTab('2-man')">2-Man</button>
+                <button class="parlay-tab" onclick="showParlayTab('3-man')">3-Man</button>
+                <button class="parlay-tab" onclick="showParlayTab('4-man')">4-Man</button>
+                <button class="parlay-tab" onclick="showParlayTab('6-man')">6-Man</button>
+            </div>
+            
+            <div id="parlay-2-man" class="parlay-tab-content active">
+                <h3>2-Man Parlays</h3>
+                <div id="parlay2ManContainer" class="parlay-container"></div>
+            </div>
+            <div id="parlay-3-man" class="parlay-tab-content">
+                <h3>3-Man Parlays</h3>
+                <div id="parlay3ManContainer" class="parlay-container"></div>
+            </div>
+            <div id="parlay-4-man" class="parlay-tab-content">
+                <h3>4-Man Parlays</h3>
+                <div id="parlay4ManContainer" class="parlay-container"></div>
+            </div>
+            <div id="parlay-6-man" class="parlay-tab-content">
+                <h3>6-Man Parlays</h3>
+                <div id="parlay6ManContainer" class="parlay-container"></div>
+            </div>
+        </div>
+
+        <!-- Parlay Calculator Modal -->
+        <div id="parlayCalculatorModal" class="parlay-modal" style="display: none;">
+            <div class="parlay-modal-content">
+                <div class="parlay-modal-header">
+                    <h2>🎲 Parlay Calculator</h2>
+                    <button onclick="hideParlayCalculator()" class="close-btn">✕</button>
+                </div>
+                <div class="parlay-calculator-body">
+                    <div class="calculator-inputs">
+                        <h3>Add Bets</h3>
+                        <div id="betsList"></div>
+                        <button onclick="addBetRow()" class="add-bet-btn">+ Add Bet</button>
+                        <div class="calculator-results">
+                            <h3>Parlay Results</h3>
+                            <div id="calculatorResults"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="streaksContainer">
@@ -639,6 +742,9 @@
                 streaksContainer.innerHTML = '';
             }
 
+            // Update parlay recommendations
+            checkParlayRecommendations(data);
+            
             // Update high probability props
             const highProbContainer = document.getElementById('highProbContainer');
             const highProbProps = data.high_prob_props || [];
@@ -1056,5 +1162,6 @@
             setInterval(loadDailyUpdateStatus, 60000);
         });
     </script>
+    <script src="{{ url_for('static', filename='parlay_ui.js') }}"></script>
 </body>
 </html>
