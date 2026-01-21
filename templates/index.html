@@ -34,7 +34,11 @@
                 Loaded: <span id="totalPlayers" style="color: {% if projections|length > 3 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ projections|length }}</span> active players | 
                 Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)
                 {% if projections|length <= 3 %}
-                <br><span style="color: #f39c12; font-size: 0.9em;">⚠️ Only {{ projections|length }} players loaded. Click "Load All Active Players" to load more.</span>
+                <br><span style="color: #f39c12; font-size: 0.9em; display: block; margin-top: 10px; padding: 10px; background: rgba(243, 156, 18, 0.1); border-radius: 8px; border-left: 3px solid #f39c12;">
+                    ⚠️ Only {{ projections|length }} players loaded. 
+                    <br>Click <strong>"📥 Load All Active Players"</strong> button below to load 100+ players.
+                    <br><small>This takes 10-15 minutes but runs in background.</small>
+                </span>
                 {% endif %}
             </p>
         </header>
@@ -1046,6 +1050,42 @@
         }
 
         async function loadAllActivePlayers() {
+            const btn = document.getElementById('loadPlayersBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Loading... (10-15 min)';
+            
+            try {
+                const response = await fetch('/api/load-all-players', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({stat_type: 'PTS', season: '2023-24'})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Player loading started in background!\n\n' + 
+                          'This will take 10-15 minutes.\n\n' +
+                          'Check Render logs for progress.\n' +
+                          'Refresh this page in 15 minutes to see all players.');
+                    
+                    // Refresh page after 30 seconds to check status
+                    setTimeout(() => {
+                        location.reload();
+                    }, 30000);
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to start loading'));
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        async function checkPlayerCount() {
             const loadBtn = document.getElementById('loadPlayersBtn');
             const progressDiv = document.getElementById('loadProgress');
             const progressText = document.getElementById('progressText');

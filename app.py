@@ -94,10 +94,10 @@ def save_projections(projections):
 # Load projections on startup (lazy load to avoid blocking)
 MARKET_PROJECTIONS = {}
 _projections_loaded = False
-def get_market_projections():
+def get_market_projections(force_reload=False):
     """Lazy load projections to avoid blocking startup."""
     global MARKET_PROJECTIONS, _projections_loaded
-    if not _projections_loaded:
+    if not _projections_loaded or force_reload:
         MARKET_PROJECTIONS = load_projections()
         _projections_loaded = True
         print(f"📊 Current market projections: {len(MARKET_PROJECTIONS)} players")
@@ -187,8 +187,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS'):
         from nba_engine import filter_high_probability_props, calculate_hit_probability
         
         # Track line changes before checking edges
+        # Reload projections in case they were updated in background
         global MARKET_PROJECTIONS
-        MARKET_PROJECTIONS = get_market_projections()
+        MARKET_PROJECTIONS = get_market_projections(force_reload=True)
         
         # Note: Don't generate projections here - it blocks the request
         # Use the "Load All Active Players" button or wait for background load
