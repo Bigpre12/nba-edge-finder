@@ -115,14 +115,6 @@ def init_scheduler():
         print(f"Warning: Could not initialize scheduler: {e}")
         print("Daily updates will not run automatically, but app will still work")
 
-# Initialize scheduler (with error handling) - only in production
-if __name__ != '__main__':
-    try:
-        init_scheduler()
-    except Exception as e:
-        print(f"Warning: Scheduler initialization failed: {e}")
-        print("App will continue without scheduled updates")
-
 def get_edges_data(show_only_70_plus=True):
     """
     Helper function to fetch edges data.
