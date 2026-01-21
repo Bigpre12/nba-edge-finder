@@ -179,6 +179,11 @@ def health():
     """Health check endpoint for deployment platforms."""
     return jsonify({'status': 'ok', 'message': 'App is running'}), 200
 
+@app.route('/ping')
+def ping():
+    """Simple ping endpoint for quick health checks."""
+    return 'pong', 200
+
 @app.route('/')
 def index():
     """
@@ -490,3 +495,4 @@ else:
     
     scheduler_thread = threading.Thread(target=delayed_scheduler_init, daemon=True)
     scheduler_thread.start()
+    print("App starting in production mode. Scheduler will initialize in background.")
