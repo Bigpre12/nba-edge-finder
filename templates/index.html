@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Edge Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>THE ORACLE</h1>
+            <p class="subtitle">Sharp angles. No fluff. Pure edge.</p>
+        </header>
+
+        {% if error %}
+        <div class="error-message">
+            <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="controls">
+            <button onclick="refreshData()" class="refresh-btn" id="refreshBtn">🔄 Refresh Edges</button>
+            <label class="auto-refresh-toggle">
+                <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+                <span>Auto-refresh (60s)</span>
+            </label>
+            <button onclick="loadAllActivePlayers()" class="load-players-btn" id="loadPlayersBtn">📥 Load All Active Players</button>
+        </div>
+
+        <div id="loadProgress" class="load-progress" style="display: none;">
+            <div class="progress-content">
+                <p id="progressText">Loading all active NBA players...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-note">This may take several minutes due to API rate limits. Please keep this page open.</p>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span id="lastUpdate">Last updated: {{ "Now" if edges else "Never" }}</span>
+            <span id="loadingIndicator" class="loading" style="display: none;">⏳ Updating...</span>
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <div id="edgesContainer">
+            {% if edges %}
+                <div class="edges-section">
+                    <h2>EDGES (<span id="edgeCount">{{ edges|length }}</span>)</h2>
+                    <div class="edges-grid" id="edgesGrid">
+                        {% for edge in edges %}
+                        <div class="oracle-card {{ edge.recommendation|lower }}">
+                            <div class="oracle-player">{{ edge.player }}</div>
+                            {% if edge.oracle %}
+                            <div class="oracle-content">
+                                <div class="oracle-line">
+                                    <strong>The Line:</strong> {{ edge.oracle.verdict }}
+                                </div>
+                                <div class="oracle-sharp">
+                                    <strong>The Sharp Angle:</strong> {{ edge.oracle.sharp_angle }}
+                                </div>
+                                <div class="oracle-key">
+                                    <strong>Key Data Point:</strong> {{ edge.oracle.key_data }}
+                                </div>
+                                <div class="oracle-verdict">
+                                    <strong>The Verdict:</strong> {{ edge.oracle.verdict }}
+                                </div>
+                                <div class="oracle-confidence">
+                                    <strong>Confidence:</strong> 
+                                    <span class="confidence-badge confidence-{{ edge.oracle.confidence|int }}">
+                                        {{ edge.oracle.confidence }} Units
+                                    </span>
+                                </div>
+                                <div class="oracle-risk">
+                                    <strong>Risk Factor:</strong> {{ edge.oracle.risk_factor }}
+                                </div>
+                                {% if edge.advanced_metrics %}
+                                <div class="advanced-metrics">
+                                    <div class="metrics-row">
+                                        <span>FG%:</span> <span>{{ edge.advanced_metrics.fg_pct }}%</span>
+                                        <span>Pts/36:</span> <span>{{ edge.advanced_metrics.points_per_36 }}</span>
+                                        <span>CV:</span> <span>{{ edge.advanced_metrics.consistency }}%</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="edge-details">
+                                <div class="stat-row">
+                                    <span class="label">Line:</span>
+                                    <span class="value">{{ edge.line }}</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="label">L5 Avg:</span>
+                                    <span class="value">{{ edge.average }}</span>
+                                </div>
+                                <div class="recommendation">
+                                    <strong>{{ edge.recommendation }}</strong>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if edge.streak and edge.streak.active %}
+                            <div class="streak-badge streak-{{ edge.streak.streak_type|lower }}">
+                                🔥 {{ edge.streak.streak_count }}-game {{ edge.streak.streak_type }} streak
+                            </div>
+                            {% endif %}
+                                {% if edge.factors %}
+                                <div class="performance-factors">
+                                    <div class="factors-header" onclick="toggleFactors(this)">
+                                        <span>📊 Performance Factors</span>
+                                        <span class="toggle-icon">▼</span>
+                                    </div>
+                                    <div class="factors-content" style="display: none;">
+                                        {% if edge.factors.injury_risk %}
+                                        <div class="factor-badge factor-warning">
+                                            ⚠️ Injury Risk ({{ edge.factors.dnp_count }} DNP game{{ 's' if edge.factors.dnp_count != 1 else '' }})
+                                        </div>
+                                        {% endif %}
+                                        {% if edge.factors.rotation_change %}
+                                        <div class="factor-badge factor-info">
+                                            🔄 Rotation Change ({{ edge.factors.recent_minutes_avg }} min recent vs {{ edge.factors.older_minutes_avg }} min earlier)
+                                        </div>
+                                        {% endif %}
+                                        <div class="factor-row">
+                                            <span class="factor-label">Minutes Trend:</span>
+                                            <span class="factor-value trend-{{ edge.factors.minutes_trend }}">
+                                                {{ edge.factors.recent_minutes_avg }} min ({{ edge.factors.minutes_trend }})
+                                            </span>
+                                        </div>
+                                        <div class="factor-row">
+                                            <span class="factor-label">Performance Trend:</span>
+                                            <span class="factor-value trend-{{ edge.factors.performance_trend }}">
+                                                {{ edge.factors.performance_trend|title }}
+                                            </span>
+                                        </div>
+                                        {% if edge.factors.shooting_efficiency %}
+                                        <div class="factor-row">
+                                            <span class="factor-label">FG% (L5):</span>
+                                            <span class="factor-value">{{ edge.factors.shooting_efficiency }}%</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="no-edges">
+                    <p>No edges found with current threshold.</p>
+                    <p class="info">Checked <span id="playerCount">{{ projections|length }}</span> players. Adjust threshold or check projections.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div id="highProbContainer">
+            {% if high_prob_props %}
+                <div class="high-prob-section">
+                    <h2>🎯 HIGH PROBABILITY PROPS (70%+) - <span id="highProbCount">{{ high_prob_props|length }}</span></h2>
+                    <p class="section-subtitle">PrizePicks/Underdog Format | Sorted by Probability</p>
+                    <div class="high-prob-grid" id="highProbGrid">
+                        {% for prop in high_prob_props %}
+                        <div class="high-prob-card">
+                            <div class="prob-header">
+                                <div class="prob-badge">{{ prop.probability }}%</div>
+                                <div class="prizepicks-display">{{ prop.prizepicks.display }}</div>
+                            </div>
+                            <div class="prob-details">
+                                <div class="prob-reasoning">
+                                    <strong>Reasoning:</strong> {{ prop.reasoning }}
+                                </div>
+                                <div class="prob-stats">
+                                    <div class="stat-item">
+                                        <span>L5 Average:</span>
+                                        <span>{{ prop.edge.average }}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span>Line:</span>
+                                        <span>{{ prop.edge.line }}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span>Edge:</span>
+                                        <span class="edge-value">{{ prop.edge.difference }}pts</span>
+                                    </div>
+                                </div>
+                                {% if prop.edge.streak and prop.edge.streak.active %}
+                                <div class="streak-indicator">
+                                    🔥 {{ prop.edge.streak.streak_count }}-game {{ prop.edge.streak.streak_type }} streak
+                                </div>
+                                {% endif %}
+                                {% if prop.beneficiary %}
+                                <div class="matchup-indicator">
+                                    ⚡ vs {{ prop.beneficiary.opponent }}: {{ prop.beneficiary.mismatch }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div id="streaksContainer">
+            {% if streaks %}
+                <div class="streaks-section">
+                    <h2>🔥 Active Streaks (<span id="streakCount">{{ streaks|length }}</span>)</h2>
+                    <p class="section-subtitle">Players consistently hitting OVER/UNDER for 2+ games</p>
+                    <div class="streaks-grid" id="streaksGrid">
+                        {% for streak in streaks %}
+                        <div class="streak-card streak-{{ streak.streak_type|lower }}">
+                            <div class="player-name">{{ streak.player }}</div>
+                            <div class="streak-details">
+                                <div class="stat-row">
+                                    <span class="label">Line:</span>
+                                    <span class="value">{{ streak.line }}</span>
+                                </div>
+                                {% if streak.average %}
+                                <div class="stat-row">
+                                    <span class="label">L5 Average:</span>
+                                    <span class="value">{{ streak.average }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="streak-info">
+                                    <div class="streak-badge-large streak-{{ streak.streak_type|lower }}">
+                                        🔥 {{ streak.streak_count }}-game {{ streak.streak_type }} streak
+                                    </div>
+                                </div>
+                                {% if streak.factors %}
+                                <div class="performance-factors">
+                                    <div class="factors-header" onclick="toggleFactors(this)">
+                                        <span>📊 Performance Factors</span>
+                                        <span class="toggle-icon">▼</span>
+                                    </div>
+                                    <div class="factors-content" style="display: none;">
+                                        {% if streak.factors.injury_risk %}
+                                        <div class="factor-badge factor-warning">
+                                            ⚠️ Injury Risk ({{ streak.factors.dnp_count }} DNP game{{ 's' if streak.factors.dnp_count != 1 else '' }})
+                                        </div>
+                                        {% endif %}
+                                        {% if streak.factors.rotation_change %}
+                                        <div class="factor-badge factor-info">
+                                            🔄 Rotation Change ({{ streak.factors.recent_minutes_avg }} min recent vs {{ streak.factors.older_minutes_avg }} min earlier)
+                                        </div>
+                                        {% endif %}
+                                        <div class="factor-row">
+                                            <span class="factor-label">Minutes Trend:</span>
+                                            <span class="factor-value trend-{{ streak.factors.minutes_trend }}">
+                                                {{ streak.factors.recent_minutes_avg }} min ({{ streak.factors.minutes_trend }})
+                                            </span>
+                                        </div>
+                                        <div class="factor-row">
+                                            <span class="factor-label">Performance Trend:</span>
+                                            <span class="factor-value trend-{{ streak.factors.performance_trend }}">
+                                                {{ streak.factors.performance_trend|title }}
+                                            </span>
+                                        </div>
+                                        {% if streak.factors.shooting_efficiency %}
+                                        <div class="factor-row">
+                                            <span class="factor-label">FG% (L5):</span>
+                                            <span class="factor-value">{{ streak.factors.shooting_efficiency }}%</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="projections-section">
+            <div class="projections-header">
+                <h3>Current Projections (<span id="projectionCount">{{ projections|length }}</span> players)</h3>
+                <input type="text" id="playerSearch" placeholder="🔍 Search players..." class="player-search" onkeyup="filterPlayers()">
+            </div>
+            <div class="table-container">
+                <table class="projections-table" id="projectionsTable">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Line</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectionsTableBody">
+                        {% for player, line in projections.items() %}
+                        <tr>
+                            <td>{{ player }}</td>
+                            <td>{{ line }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            <p>THE ORACLE | NBA API | Real-time edge detection</p>
+        </footer>
+    </div>
+
+    <script>
+        let autoRefreshInterval = null;
+        const REFRESH_INTERVAL = 60000; // 60 seconds
+
+        function updatePage(data) {
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = `Last updated: ${data.timestamp}`;
+            
+            // Clear error
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = '';
+            
+            if (data.error) {
+                errorContainer.innerHTML = `<div class="error-message"><strong>Error:</strong> ${data.error}</div>`;
+                return;
+            }
+
+            // Update edges
+            const edgesContainer = document.getElementById('edgesContainer');
+            const edges = data.edges || [];
+            
+            if (edges.length > 0) {
+                edgesContainer.innerHTML = `
+                    <div class="edges-section">
+                        <h2>EDGES (<span id="edgeCount">${edges.length}</span>)</h2>
+                        <div class="edges-grid" id="edgesGrid">
+                            ${edges.map(edge => {
+                                const streakBadge = edge.streak && edge.streak.active 
+                                    ? `<div class="streak-badge streak-${edge.streak.streak_type.toLowerCase()}">🔥 ${edge.streak.streak_count}-game ${edge.streak.streak_type} streak</div>`
+                                    : '';
+                                
+                                if (edge.oracle) {
+                                    const confidenceClass = Math.floor(edge.oracle.confidence);
+                                    const advancedMetrics = edge.advanced_metrics 
+                                        ? `<div class="advanced-metrics"><div class="metrics-row"><span>FG%:</span> <span>${edge.advanced_metrics.fg_pct}%</span> <span>Pts/36:</span> <span>${edge.advanced_metrics.points_per_36}</span> <span>CV:</span> <span>${edge.advanced_metrics.consistency}%</span></div></div>`
+                                        : '';
+                                    
+                                    return `
+                                    <div class="oracle-card ${edge.recommendation.toLowerCase()}">
+                                        <div class="oracle-player">${edge.player}</div>
+                                        <div class="oracle-content">
+                                            <div class="oracle-line"><strong>The Line:</strong> ${edge.oracle.verdict}</div>
+                                            <div class="oracle-sharp"><strong>The Sharp Angle:</strong> ${edge.oracle.sharp_angle}</div>
+                                            <div class="oracle-key"><strong>Key Data Point:</strong> ${edge.oracle.key_data}</div>
+                                            <div class="oracle-verdict"><strong>The Verdict:</strong> ${edge.oracle.verdict}</div>
+                                            <div class="oracle-confidence"><strong>Confidence:</strong> <span class="confidence-badge confidence-${confidenceClass}">${edge.oracle.confidence} Units</span></div>
+                                            <div class="oracle-risk"><strong>Risk Factor:</strong> ${edge.oracle.risk_factor}</div>
+                                        ${advancedMetrics}
+                                    </div>
+                                    ${edge.beneficiary ? `
+                                    <div class="phase2-analysis">
+                                        <div class="phase2-header" onclick="togglePhase2(this)">
+                                            <span>⚡ PHASE 2: STATISTICAL BENEFICIARY</span>
+                                            <span class="toggle-icon">▼</span>
+                                        </div>
+                                        <div class="phase2-content" style="display: none;">
+                                            <div class="phase2-item"><strong>1. The Player:</strong> ${edge.beneficiary.player} (${edge.beneficiary.position})</div>
+                                            <div class="phase2-item"><strong>2. The Mismatch:</strong> ${edge.beneficiary.mismatch}</div>
+                                            <div class="phase2-item"><strong>3. The Consensus Expectation:</strong> ${edge.beneficiary.consensus_expectation} ${edge.stat_type}</div>
+                                            <div class="phase2-item"><strong>4. The Projection:</strong> ${edge.beneficiary.projection_direction} (${edge.beneficiary.projection} ${edge.stat_type})</div>
+                                            <div class="phase2-item"><strong>5. The Confidence Logic:</strong> ${edge.beneficiary.confidence_logic}</div>
+                                            ${edge.beneficiary.matchup_data ? `
+                                            <div class="phase2-metrics">
+                                                <div class="metric-item"><span>Avg vs Opponent:</span> <span>${edge.beneficiary.matchup_data.avg_vs_opponent}</span></div>
+                                                <div class="metric-item"><span>Overall Avg:</span> <span>${edge.beneficiary.matchup_data.overall_avg}</span></div>
+                                                ${edge.beneficiary.matchup_data.advantage ? `<div class="metric-item"><span>Advantage:</span> <span class="advantage-positive">+${edge.beneficiary.matchup_data.advantage}</span></div>` : ''}
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    ${streakBadge}
+                                    </div>
+                                    `;
+                                } else {
+                                    return `
+                                    <div class="edge-card ${edge.recommendation.toLowerCase()}">
+                                        <div class="player-name">${edge.player}</div>
+                                        <div class="edge-details">
+                                            <div class="stat-row"><span class="label">Line:</span><span class="value">${edge.line}</span></div>
+                                            <div class="stat-row"><span class="label">L5 Avg:</span><span class="value">${edge.average}</span></div>
+                                            <div class="recommendation"><strong>${edge.recommendation}</strong></div>
+                                        </div>
+                                        ${streakBadge}
+                                    </div>
+                                    `;
+                                }
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                const playerCount = Object.keys(data.projections).length;
+                edgesContainer.innerHTML = `
+                    <div class="no-edges">
+                        <p>No edges found with current threshold.</p>
+                        <p class="info">Checked <span id="playerCount">${playerCount}</span> players. Adjust threshold or check projections.</p>
+                    </div>
+                `;
+            }
+
+            // Update streaks (sort by streak count, longest first)
+            const streaksContainer = document.getElementById('streaksContainer');
+            let streaks = data.streaks || [];
+            streaks.sort((a, b) => (b.streak_count || 0) - (a.streak_count || 0));
+            
+            if (streaks.length > 0) {
+                streaksContainer.innerHTML = `
+                    <div class="streaks-section">
+                        <h2>🔥 Active Streaks (<span id="streakCount">${streaks.length}</span>)</h2>
+                        <p class="section-subtitle">Players consistently hitting OVER/UNDER for 2+ games</p>
+                        <div class="streaks-grid" id="streaksGrid">
+                            ${streaks.map(streak => `
+                                <div class="streak-card streak-${streak.streak_type.toLowerCase()}">
+                                    <div class="player-name">${streak.player}</div>
+                                    <div class="streak-details">
+                                        <div class="stat-row">
+                                            <span class="label">Line:</span>
+                                            <span class="value">${streak.line}</span>
+                                        </div>
+                                        ${streak.average ? `
+                                        <div class="stat-row">
+                                            <span class="label">L5 Average:</span>
+                                            <span class="value">${streak.average}</span>
+                                        </div>
+                                        ` : ''}
+                                        <div class="streak-info">
+                                            <div class="streak-badge-large streak-${streak.streak_type.toLowerCase()}">
+                                                🔥 ${streak.streak_count}-game ${streak.streak_type} streak
+                                            </div>
+                                        </div>
+                                        ${streak.factors ? `
+                                        <div class="performance-factors">
+                                            <div class="factors-header" onclick="toggleFactors(this)">
+                                                <span>📊 Performance Factors</span>
+                                                <span class="toggle-icon">▼</span>
+                                            </div>
+                                            <div class="factors-content" style="display: none;">
+                                                ${edge.factors.injury_risk ? `
+                                                <div class="factor-badge factor-warning">
+                                                    ⚠️ Injury Risk (${edge.factors.dnp_count} DNP game${edge.factors.dnp_count !== 1 ? 's' : ''})
+                                                </div>
+                                                ` : ''}
+                                                ${edge.factors.rotation_change ? `
+                                                <div class="factor-badge factor-info">
+                                                    🔄 Rotation Change (${edge.factors.recent_minutes_avg} min recent vs ${edge.factors.older_minutes_avg} min earlier)
+                                                </div>
+                                                ` : ''}
+                                                <div class="factor-row">
+                                                    <span class="factor-label">Minutes Trend:</span>
+                                                    <span class="factor-value trend-${edge.factors.minutes_trend}">
+                                                        ${edge.factors.recent_minutes_avg} min (${edge.factors.minutes_trend})
+                                                    </span>
+                                                </div>
+                                                <div class="factor-row">
+                                                    <span class="factor-label">Performance Trend:</span>
+                                                    <span class="factor-value trend-${edge.factors.performance_trend}">
+                                                        ${edge.factors.performance_trend.charAt(0).toUpperCase() + edge.factors.performance_trend.slice(1)}
+                                                    </span>
+                                                </div>
+                                                ${edge.factors.shooting_efficiency ? `
+                                                <div class="factor-row">
+                                                    <span class="factor-label">FG% (L5):</span>
+                                                    <span class="factor-value">${edge.factors.shooting_efficiency}%</span>
+                                                </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                const playerCount = Object.keys(data.projections).length;
+                edgesContainer.innerHTML = `
+                    <div class="no-edges">
+                        <p>No edges found with current threshold.</p>
+                        <p class="info">Checked <span id="playerCount">${playerCount}</span> players. Adjust threshold or check projections.</p>
+                    </div>
+                `;
+            }
+
+            // Update streaks (sort by streak count, longest first)
+            const streaksContainer = document.getElementById('streaksContainer');
+            let streaks = data.streaks || [];
+            streaks.sort((a, b) => (b.streak_count || 0) - (a.streak_count || 0));
+            
+            if (streaks.length > 0) {
+                streaksContainer.innerHTML = `
+                    <div class="streaks-section">
+                        <h2>🔥 Active Streaks (<span id="streakCount">${streaks.length}</span>)</h2>
+                        <p class="section-subtitle">Players consistently hitting OVER/UNDER for 2+ games</p>
+                        <div class="streaks-grid" id="streaksGrid">
+                            ${streaks.map(streak => `
+                                <div class="streak-card streak-${streak.streak_type.toLowerCase()}">
+                                    <div class="player-name">${streak.player}</div>
+                                    <div class="streak-details">
+                                        <div class="stat-row">
+                                            <span class="label">Line:</span>
+                                            <span class="value">${streak.line}</span>
+                                        </div>
+                                        ${streak.average ? `
+                                        <div class="stat-row">
+                                            <span class="label">L5 Average:</span>
+                                            <span class="value">${streak.average}</span>
+                                        </div>
+                                        ` : ''}
+                                        <div class="streak-info">
+                                            <div class="streak-badge-large streak-${streak.streak_type.toLowerCase()}">
+                                                🔥 ${streak.streak_count}-game ${streak.streak_type} streak
+                                            </div>
+                                        </div>
+                                        ${streak.factors ? `
+                                        <div class="performance-factors">
+                                            <div class="factors-header" onclick="toggleFactors(this)">
+                                                <span>📊 Performance Factors</span>
+                                                <span class="toggle-icon">▼</span>
+                                            </div>
+                                            <div class="factors-content" style="display: none;">
+                                                ${streak.factors.injury_risk ? `
+                                                <div class="factor-badge factor-warning">
+                                                    ⚠️ Injury Risk (${streak.factors.dnp_count} DNP game${streak.factors.dnp_count !== 1 ? 's' : ''})
+                                                </div>
+                                                ` : ''}
+                                                ${streak.factors.rotation_change ? `
+                                                <div class="factor-badge factor-info">
+                                                    🔄 Rotation Change (${streak.factors.recent_minutes_avg} min recent vs ${streak.factors.older_minutes_avg} min earlier)
+                                                </div>
+                                                ` : ''}
+                                                <div class="factor-row">
+                                                    <span class="factor-label">Minutes Trend:</span>
+                                                    <span class="factor-value trend-${streak.factors.minutes_trend}">
+                                                        ${streak.factors.recent_minutes_avg} min (${streak.factors.minutes_trend})
+                                                    </span>
+                                                </div>
+                                                <div class="factor-row">
+                                                    <span class="factor-label">Performance Trend:</span>
+                                                    <span class="factor-value trend-${streak.factors.performance_trend}">
+                                                        ${streak.factors.performance_trend.charAt(0).toUpperCase() + streak.factors.performance_trend.slice(1)}
+                                                    </span>
+                                                </div>
+                                                ${streak.factors.shooting_efficiency ? `
+                                                <div class="factor-row">
+                                                    <span class="factor-label">FG% (L5):</span>
+                                                    <span class="factor-value">${streak.factors.shooting_efficiency}%</span>
+                                                </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                streaksContainer.innerHTML = '';
+            }
+
+            // Update high probability props
+            const highProbContainer = document.getElementById('highProbContainer');
+            const highProbProps = data.high_prob_props || [];
+            
+            if (highProbProps.length > 0) {
+                highProbContainer.innerHTML = `
+                    <div class="high-prob-section">
+                        <h2>🎯 HIGH PROBABILITY PROPS (70%+) - <span id="highProbCount">${highProbProps.length}</span></h2>
+                        <p class="section-subtitle">PrizePicks/Underdog Format | Sorted by Probability</p>
+                        <div class="high-prob-grid" id="highProbGrid">
+                            ${highProbProps.map(prop => {
+                                const streakBadge = prop.edge.streak && prop.edge.streak.active 
+                                    ? `<div class="streak-indicator">🔥 ${prop.edge.streak.streak_count}-game ${prop.edge.streak.streak_type} streak</div>`
+                                    : '';
+                                const matchupBadge = prop.beneficiary 
+                                    ? `<div class="matchup-indicator">⚡ vs ${prop.beneficiary.opponent}: ${prop.beneficiary.mismatch}</div>`
+                                    : '';
+                                
+                                return `
+                                <div class="high-prob-card">
+                                    <div class="prob-header">
+                                        <div class="prob-badge">${prop.probability}%</div>
+                                        <div class="prizepicks-display">${prop.prizepicks.display}</div>
+                                    </div>
+                                    <div class="prob-details">
+                                        <div class="prob-reasoning">
+                                            <strong>Reasoning:</strong> ${prop.reasoning}
+                                        </div>
+                                        <div class="prob-stats">
+                                            <div class="stat-item">
+                                                <span>L5 Average:</span>
+                                                <span>${prop.edge.average}</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span>Line:</span>
+                                                <span>${prop.edge.line}</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span>Edge:</span>
+                                                <span class="edge-value">${prop.edge.difference}pts</span>
+                                            </div>
+                                        </div>
+                                        ${streakBadge}
+                                        ${matchupBadge}
+                                    </div>
+                                </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                highProbContainer.innerHTML = '';
+            }
+
+            // Update projections table
+            const projectionsTable = document.getElementById('projectionsTable');
+            const tbody = document.getElementById('projectionsTableBody');
+            const projectionCount = document.getElementById('projectionCount');
+            
+            tbody.innerHTML = Object.entries(data.projections).map(([player, line]) => `
+                <tr>
+                    <td>${player}</td>
+                    <td>${line}</td>
+                </tr>
+            `).join('');
+            
+            projectionCount.textContent = Object.keys(data.projections).length;
+        }
+
+        function filterPlayers() {
+            const searchInput = document.getElementById('playerSearch');
+            const filter = searchInput.value.toLowerCase();
+            const table = document.getElementById('projectionsTable');
+            const rows = table.getElementsByTagName('tr');
+            
+            let visibleCount = 0;
+            
+            // Start from index 1 to skip header row
+            for (let i = 1; i < rows.length; i++) {
+                const playerCell = rows[i].getElementsByTagName('td')[0];
+                if (playerCell) {
+                    const playerName = playerCell.textContent || playerCell.innerText;
+                    if (playerName.toLowerCase().indexOf(filter) > -1) {
+                        rows[i].style.display = '';
+                        visibleCount++;
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        async function refreshData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            
+            refreshBtn.disabled = true;
+            loadingIndicator.style.display = 'inline';
+            
+            try {
+                const response = await fetch('/api/edges');
+                const data = await response.json();
+                updatePage(data);
+            } catch (error) {
+                document.getElementById('errorContainer').innerHTML = 
+                    `<div class="error-message"><strong>Error:</strong> Failed to fetch data: ${error.message}</div>`;
+            } finally {
+                refreshBtn.disabled = false;
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const checkbox = document.getElementById('autoRefresh');
+            
+            if (checkbox.checked) {
+                // Start auto-refresh
+                autoRefreshInterval = setInterval(refreshData, REFRESH_INTERVAL);
+                console.log('Auto-refresh enabled');
+            } else {
+                // Stop auto-refresh
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                console.log('Auto-refresh disabled');
+            }
+        }
+
+        async function loadAllActivePlayers() {
+            const loadBtn = document.getElementById('loadPlayersBtn');
+            const progressDiv = document.getElementById('loadProgress');
+            const progressText = document.getElementById('progressText');
+            const progressFill = document.getElementById('progressFill');
+            
+            if (!confirm('This will load ALL active NBA players and may take 10-15 minutes due to API rate limits. Continue?')) {
+                return;
+            }
+            
+            loadBtn.disabled = true;
+            progressDiv.style.display = 'block';
+            progressText.textContent = 'Starting to load all active players...';
+            progressFill.style.width = '0%';
+            
+            try {
+                const response = await fetch('/api/load-all-players', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        season: '2023-24',
+                        stat_type: 'PTS'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    progressFill.style.width = '100%';
+                    progressText.textContent = `Successfully loaded ${data.count} players!`;
+                    
+                    // Refresh the page data after a short delay
+                    setTimeout(() => {
+                        refreshData();
+                        progressDiv.style.display = 'none';
+                        alert(`Successfully loaded ${data.count} active NBA players!`);
+                    }, 2000);
+                } else {
+                    progressText.textContent = `Error: ${data.error}`;
+                    alert(`Error loading players: ${data.error}`);
+                }
+            } catch (error) {
+                progressText.textContent = `Error: ${error.message}`;
+                alert(`Failed to load players: ${error.message}`);
+            } finally {
+                loadBtn.disabled = false;
+            }
+        }
+
+        function toggleFactors(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+
+        function togglePhase2(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+
+        // Initial load timestamp
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date().toLocaleString();
+            document.getElementById('lastUpdate').textContent = `Last updated: ${now}`;
+        });
+    </script>
+</body>
+</html>
