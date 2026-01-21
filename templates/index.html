@@ -25,7 +25,7 @@
                         {% endfor %}
                     </optgroup>
                 </select>
-                <span class="stat-description" id="statDescription">{{ stat_categories[current_stat_type].description if current_stat_type in stat_categories else '' }}</span>
+                <span class="stat-description" id="statDescription">{{ stat_categories.get(current_stat_type, {}).get('description', '') if stat_categories else '' }}</span>
             </div>
             <p class="player-count">Loaded: <span id="totalPlayers">{{ projections|length }}</span> active players | Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)</p>
         </header>

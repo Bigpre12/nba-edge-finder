@@ -215,52 +215,88 @@ def index():
     Main route that displays NBA betting edges.
     Only shows 70%+ probability props by default.
     """
-    global MARKET_PROJECTIONS
-    MARKET_PROJECTIONS = get_market_projections()  # Lazy load
-    
-    # Auto-load all active players if projections file is empty or has default values
-    # Do this in background to avoid blocking startup
-    if len(MARKET_PROJECTIONS) <= 3:  # Only default players
-        import threading
-        def background_load():
-            print("Auto-loading all active players in background...")
-            try:
-                new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
-                save_projections(new_projections)
-                global MARKET_PROJECTIONS
-                MARKET_PROJECTIONS = new_projections
-                print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
-            except Exception as e:
-                print(f"Error auto-loading players: {e}")
+    try:
+        global MARKET_PROJECTIONS
+        MARKET_PROJECTIONS = get_market_projections()  # Lazy load
         
-        # Start in background thread, don't wait
-        threading.Thread(target=background_load, daemon=True).start()
-    
-    # Get selected stat type from request or default to PTS
-    stat_type = request.args.get('stat_type', 'PTS')
-    if not is_valid_stat_type(stat_type):
-        stat_type = 'PTS'
-    
-    # Get edges - only 70%+ probability by default
-    # This will work even if players are still loading
-    edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True, stat_type=stat_type)
-    
-    # Get stat categories for UI
-    stat_categories = get_stat_categories()
-    individual_stats = get_individual_stats()
-    combination_stats = get_combination_stats()
-    
-    return render_template('index.html', 
-                         edges=edges, 
-                         streaks=streaks, 
-                         high_prob_props=high_prob_props, 
-                         parlay_recommendations=parlay_recommendations, 
-                         projections=MARKET_PROJECTIONS, 
-                         error=error,
-                         stat_categories=stat_categories,
-                         individual_stats=individual_stats,
-                         combination_stats=combination_stats,
-                         current_stat_type=stat_type)
+        # Auto-load all active players if projections file is empty or has default values
+        # Do this in background to avoid blocking startup
+        if len(MARKET_PROJECTIONS) <= 3:  # Only default players
+            import threading
+            def background_load():
+                print("Auto-loading all active players in background...")
+                try:
+                    new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
+                    save_projections(new_projections)
+                    global MARKET_PROJECTIONS
+                    MARKET_PROJECTIONS = new_projections
+                    print(f"Loaded {len(MARKET_PROJECTIONS)} active players")
+                except Exception as e:
+                    print(f"Error auto-loading players: {e}")
+            
+            # Start in background thread, don't wait
+            threading.Thread(target=background_load, daemon=True).start()
+        
+        # Get selected stat type from request or default to PTS
+        stat_type = request.args.get('stat_type', 'PTS')
+        try:
+            if not is_valid_stat_type(stat_type):
+                stat_type = 'PTS'
+        except Exception as e:
+            print(f"Error validating stat type: {e}")
+            stat_type = 'PTS'
+        
+        # Get edges - only 70%+ probability by default
+        # This will work even if players are still loading
+        try:
+            edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True, stat_type=stat_type)
+        except Exception as e:
+            print(f"Error getting edges data: {e}")
+            import traceback
+            traceback.print_exc()
+            edges, streaks, high_prob_props, parlay_recommendations, error = [], [], [], {}, f"Error loading edges: {str(e)}"
+        
+        # Get stat categories for UI - with error handling
+        try:
+            stat_categories = get_stat_categories()
+            individual_stats = get_individual_stats()
+            combination_stats = get_combination_stats()
+        except Exception as e:
+            print(f"Error getting stat categories: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fallback to default PTS only
+            stat_categories = {'PTS': {'name': 'Points', 'abbreviation': 'PTS', 'description': 'Total points scored'}}
+            individual_stats = {'PTS': stat_categories['PTS']}
+            combination_stats = {}
+        
+        return render_template('index.html', 
+                             edges=edges, 
+                             streaks=streaks, 
+                             high_prob_props=high_prob_props, 
+                             parlay_recommendations=parlay_recommendations, 
+                             projections=MARKET_PROJECTIONS, 
+                             error=error,
+                             stat_categories=stat_categories,
+                             individual_stats=individual_stats,
+                             combination_stats=combination_stats,
+                             current_stat_type=stat_type)
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Fatal error in index route: {e}")
+        print(error_trace)
+        return f"""
+        <html>
+        <head><title>Error</title></head>
+        <body style="font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff;">
+            <h1 style="color: #e74c3c;">Internal Server Error</h1>
+            <p>An error occurred while loading the page.</p>
+            <pre style="background: #2a2a2a; padding: 15px; border-radius: 4px; overflow-x: auto;">{error_trace}</pre>
+            <p><a href="/ping" style="color: #3498db;">Test ping endpoint</a></p>
+        </body>
+        </html>
+        """, 500
 
 @app.route('/api/edges')
 @requires_auth
