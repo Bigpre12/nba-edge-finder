@@ -174,6 +174,11 @@ def get_edges_data(show_only_70_plus=True):
         error_message = f"Error fetching edges: {str(e)}"
         return [], [], [], error_message
 
+@app.route('/health')
+def health():
+    """Health check endpoint for deployment platforms."""
+    return jsonify({'status': 'ok', 'message': 'App is running'}), 200
+
 @app.route('/')
 def index():
     """
@@ -472,8 +477,16 @@ if __name__ == '__main__':
 else:
     # Production mode - disable debug
     app.config['DEBUG'] = False
-    # Initialize scheduler for production (already done above, but ensure it's called)
-    try:
-        init_scheduler()
-    except Exception as e:
-        print(f"Warning: Scheduler initialization failed: {e}")
+    # Initialize scheduler for production (delayed to avoid blocking startup)
+    # Use a simple thread to initialize scheduler after app starts
+    import threading
+    def delayed_scheduler_init():
+        import time
+        time.sleep(2)  # Wait 2 seconds for app to fully start
+        try:
+            init_scheduler()
+        except Exception as e:
+            print(f"Warning: Scheduler initialization failed: {e}")
+    
+    scheduler_thread = threading.Thread(target=delayed_scheduler_init, daemon=True)
+    scheduler_thread.start()
