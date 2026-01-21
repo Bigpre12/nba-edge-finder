@@ -11,6 +11,22 @@
         <header>
             <h1>THE ORACLE</h1>
             <p class="subtitle">Sharp angles. No fluff. Pure edge. | Showing 70%+ probability props only</p>
+            <div class="stat-selector-container">
+                <label for="statTypeSelect" class="stat-selector-label">📊 Stat Category:</label>
+                <select id="statTypeSelect" onchange="changeStatType()" class="stat-selector">
+                    <optgroup label="Individual Stats">
+                        {% for key, stat in individual_stats.items() %}
+                        <option value="{{ key }}" {% if current_stat_type == key %}selected{% endif %}>{{ stat.name }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Combination Stats">
+                        {% for key, stat in combination_stats.items() %}
+                        <option value="{{ key }}" {% if current_stat_type == key %}selected{% endif %}>{{ stat.name }} ({{ stat.abbreviation }})</option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+                <span class="stat-description" id="statDescription">{{ stat_categories[current_stat_type].description if current_stat_type in stat_categories else '' }}</span>
+            </div>
             <p class="player-count">Loaded: <span id="totalPlayers">{{ projections|length }}</span> active players | Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)</p>
         </header>
 
@@ -972,6 +988,20 @@
         }
 
         function toggleShowAll() {
+            refreshData();
+        }
+
+        function changeStatType() {
+            const statType = document.getElementById('statTypeSelect').value;
+            const statDesc = document.getElementById('statDescription');
+            
+            // Update description
+            const statCategories = {{ stat_categories|tojson }};
+            if (statCategories[statType]) {
+                statDesc.textContent = statCategories[statType].description;
+            }
+            
+            // Refresh data with new stat type
             refreshData();
         }
 
