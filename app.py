@@ -1,8 +1,14 @@
 from flask import Flask, render_template, jsonify, request
-from datetime import datetime
+from datetime import datetime, time
 from nba_engine import check_for_edges, get_all_active_players, generate_projections_from_active_players
+from line_tracker import (
+    track_line_changes, get_line_changes, add_to_chase_list, get_chase_list,
+    remove_from_chase_list, add_alt_line, get_alt_lines, update_line
+)
+from apscheduler.schedulers.background import BackgroundScheduler
 import json
 import os
+import atexit
 
 app = Flask(__name__)
 
@@ -39,6 +45,47 @@ def save_projections(projections):
 
 # Load projections on startup
 MARKET_PROJECTIONS = load_projections()
+
+# Initialize scheduler for daily updates
+scheduler = BackgroundScheduler()
+scheduler.start()
+
+def daily_update_job():
+    """Run daily update at 8am - refresh edges and track line changes."""
+    global MARKET_PROJECTIONS
+    print(f"[{datetime.now()}] Running daily update at 8am...")
+    
+    try:
+        # Reload projections
+        MARKET_PROJECTIONS = load_projections()
+        
+        # Track line changes
+        changes = track_line_changes(MARKET_PROJECTIONS)
+        if changes:
+            print(f"Line changes detected: {len(changes)} players")
+            for player, change in changes.items():
+                print(f"  {player}: {change['previous']} → {change['current']} ({change['direction']})")
+        
+        # Refresh edges data (pre-cache for faster access)
+        get_edges_data()
+        
+        print("Daily update complete!")
+    except Exception as e:
+        print(f"Error in daily update: {e}")
+
+# Schedule daily update at 8am
+scheduler.add_job(
+    func=daily_update_job,
+    trigger="cron",
+    hour=8,
+    minute=0,
+    id='daily_update',
+    name='Daily 8am Update',
+    replace_existing=True
+)
+
+# Shut down scheduler on app exit
+atexit.register(lambda: scheduler.shutdown())
 
 def get_edges_data():
     """
@@ -182,6 +229,130 @@ def api_projections():
         'projections': MARKET_PROJECTIONS,
         'count': len(MARKET_PROJECTIONS)
     })
+
+@app.route('/api/line-changes')
+def api_line_changes():
+    """Get line changes since last update."""
+    global MARKET_PROJECTIONS
+    MARKET_PROJECTIONS = load_projections()
+    changes = track_line_changes(MARKET_PROJECTIONS)
+    return jsonify({
+        'changes': changes,
+        'count': len(changes),
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/chase-list', methods=['GET', 'POST', 'DELETE'])
+def api_chase_list():
+    """Manage chase list - props to track/follow."""
+    if request.method == 'POST':
+        data = request.get_json()
+        player = data.get('player')
+        line = data.get('line')
+        stat_type = data.get('stat_type', 'PTS')
+        reason = data.get('reason', '')
+        
+        if add_to_chase_list(player, line, stat_type, reason):
+            return jsonify({'success': True, 'message': 'Added to chase list'})
+        return jsonify({'success': False, 'error': 'Failed to add'}), 400
+    
+    elif request.method == 'DELETE':
+        data = request.get_json()
+        player = data.get('player')
+        stat_type = data.get('stat_type', 'PTS')
+        
+        if remove_from_chase_list(player, stat_type):
+            return jsonify({'success': True, 'message': 'Removed from chase list'})
+        return jsonify({'success': False, 'error': 'Failed to remove'}), 400
+    
+    # GET request
+    chase_list = get_chase_list()
+    return jsonify({
+        'chase_list': chase_list,
+        'count': len(chase_list)
+    })
+
+@app.route('/api/alt-lines', methods=['GET', 'POST'])
+def api_alt_lines():
+    """Manage alternative lines."""
+    if request.method == 'POST':
+        data = request.get_json()
+        player = data.get('player')
+        main_line = data.get('main_line')
+        alt_line = data.get('alt_line')
+        stat_type = data.get('stat_type', 'PTS')
+        source = data.get('source', '')
+        
+        if add_alt_line(player, main_line, alt_line, stat_type, source):
+            return jsonify({'success': True, 'message': 'Alternative line added'})
+        return jsonify({'success': False, 'error': 'Failed to add'}), 400
+    
+    # GET request
+    player = request.args.get('player')
+    stat_type = request.args.get('stat_type', 'PTS')
+    alt_lines = get_alt_lines(player, stat_type)
+    return jsonify({
+        'alt_lines': alt_lines,
+        'player': player,
+        'stat_type': stat_type
+    })
+
+@app.route('/api/update-line', methods=['POST'])
+def api_update_line():
+    """Update a line even after it's been sent off."""
+    global MARKET_PROJECTIONS
+    data = request.get_json()
+    player = data.get('player')
+    old_line = data.get('old_line')
+    new_line = data.get('new_line')
+    stat_type = data.get('stat_type', 'PTS')
+    
+    if not all([player, old_line is not None, new_line is not None]):
+        return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+    
+    # Update in projections
+    MARKET_PROJECTIONS[player] = new_line
+    save_projections(MARKET_PROJECTIONS)
+    
+    # Track the change
+    changes = update_line(player, old_line, new_line, stat_type)
+    
+    return jsonify({
+        'success': True,
+        'message': f'Line updated: {old_line} → {new_line}',
+        'changes': changes
+    })
+
+@app.route('/api/daily-update-status')
+def api_daily_update_status():
+    """Get status of daily update scheduler."""
+    jobs = scheduler.get_jobs()
+    daily_job = next((job for job in jobs if job.id == 'daily_update'), None)
+    
+    status = {
+        'scheduler_running': scheduler.running,
+        'daily_update_scheduled': daily_job is not None,
+        'next_run': daily_job.next_run_time.isoformat() if daily_job and daily_job.next_run_time else None,
+        'last_update': None  # Could track this in a file
+    }
+    
+    return jsonify(status)
+
+@app.route('/api/trigger-update', methods=['POST'])
+def api_trigger_update():
+    """Manually trigger daily update."""
+    try:
+        daily_update_job()
+        return jsonify({
+            'success': True,
+            'message': 'Update triggered successfully',
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     # Development mode

@@ -26,6 +26,7 @@
                 <span>Auto-refresh (60s)</span>
             </label>
             <button onclick="loadAllActivePlayers()" class="load-players-btn" id="loadPlayersBtn">📥 Load All Active Players</button>
+            <button onclick="showLineManagement()" class="line-mgmt-btn" id="lineMgmtBtn">📊 Line Management</button>
         </div>
 
         <div id="loadProgress" class="load-progress" style="display: none;">
@@ -41,6 +42,60 @@
         <div class="status-bar">
             <span id="lastUpdate">Last updated: {{ "Now" if edges else "Never" }}</span>
             <span id="loadingIndicator" class="loading" style="display: none;">⏳ Updating...</span>
+            <span id="dailyUpdateStatus" class="daily-status"></span>
+        </div>
+
+        <!-- Line Management Panel -->
+        <div id="lineManagementPanel" class="line-management-panel" style="display: none;">
+            <div class="panel-header">
+                <h3>📊 Line Management</h3>
+                <button onclick="hideLineManagement()" class="close-btn">✕</button>
+            </div>
+            
+            <div class="panel-tabs">
+                <button class="tab-btn active" onclick="showTab('line-changes')">Line Changes</button>
+                <button class="tab-btn" onclick="showTab('chase-list')">Chase List</button>
+                <button class="tab-btn" onclick="showTab('alt-lines')">Alt Lines</button>
+                <button class="tab-btn" onclick="showTab('edit-lines')">Edit Lines</button>
+            </div>
+
+            <!-- Line Changes Tab -->
+            <div id="tab-line-changes" class="tab-content active">
+                <h4>Line Changes (Last 24h)</h4>
+                <div id="lineChangesContainer"></div>
+                <button onclick="loadLineChanges()" class="refresh-btn">🔄 Refresh Changes</button>
+            </div>
+
+            <!-- Chase List Tab -->
+            <div id="tab-chase-list" class="tab-content">
+                <h4>Props to Chase</h4>
+                <div id="chaseListContainer"></div>
+                <button onclick="loadChaseList()" class="refresh-btn">🔄 Refresh</button>
+            </div>
+
+            <!-- Alt Lines Tab -->
+            <div id="tab-alt-lines" class="tab-content">
+                <h4>Alternative Lines</h4>
+                <div id="altLinesContainer"></div>
+                <button onclick="loadAltLines()" class="refresh-btn">🔄 Refresh</button>
+            </div>
+
+            <!-- Edit Lines Tab -->
+            <div id="tab-edit-lines" class="tab-content">
+                <h4>Edit Lines (Even After Send-Off)</h4>
+                <div class="edit-lines-form">
+                    <select id="editPlayerSelect" class="player-select">
+                        <option value="">Select Player...</option>
+                        {% for player in projections.keys() %}
+                        <option value="{{ player }}">{{ player }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" id="oldLineInput" step="0.5" placeholder="Old Line" class="line-input">
+                    <input type="number" id="newLineInput" step="0.5" placeholder="New Line" class="line-input">
+                    <button onclick="updateLine()" class="update-btn">Update Line</button>
+                </div>
+                <div id="editResult"></div>
+            </div>
         </div>
 
         <div id="errorContainer"></div>
@@ -775,10 +830,198 @@
             }
         }
 
+        // Line Management Functions
+        function showLineManagement() {
+            document.getElementById('lineManagementPanel').style.display = 'block';
+            loadLineChanges();
+            loadChaseList();
+            loadAltLines();
+            loadDailyUpdateStatus();
+        }
+
+        function hideLineManagement() {
+            document.getElementById('lineManagementPanel').style.display = 'none';
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function loadLineChanges() {
+            try {
+                const response = await fetch('/api/line-changes');
+                const data = await response.json();
+                const container = document.getElementById('lineChangesContainer');
+                
+                if (data.changes && Object.keys(data.changes).length > 0) {
+                    container.innerHTML = Object.entries(data.changes).map(([player, change]) => `
+                        <div class="line-change-card">
+                            <div class="change-player">${player}</div>
+                            <div class="change-details">
+                                <span class="old-line">${change.previous}</span>
+                                <span class="arrow">→</span>
+                                <span class="new-line">${change.current}</span>
+                                <span class="movement ${change.direction}">${change.movement > 0 ? '+' : ''}${change.movement}</span>
+                            </div>
+                            <div class="change-direction">Line moved ${change.direction}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="no-data">No line changes detected in last 24h</p>';
+                }
+            } catch (error) {
+                console.error('Error loading line changes:', error);
+            }
+        }
+
+        async function loadChaseList() {
+            try {
+                const response = await fetch('/api/chase-list');
+                const data = await response.json();
+                const container = document.getElementById('chaseListContainer');
+                
+                if (data.chase_list && data.chase_list.length > 0) {
+                    container.innerHTML = data.chase_list.map(item => `
+                        <div class="chase-item">
+                            <div class="chase-player">${item.player}</div>
+                            <div class="chase-line">Line: ${item.line} ${item.stat_type}</div>
+                            <div class="chase-reason">${item.reason || 'No reason provided'}</div>
+                            <button onclick="removeFromChase('${item.player}', '${item.stat_type}')" class="remove-btn">Remove</button>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="no-data">No props in chase list</p>';
+                }
+            } catch (error) {
+                console.error('Error loading chase list:', error);
+            }
+        }
+
+        async function loadAltLines() {
+            try {
+                const response = await fetch('/api/alt-lines');
+                const data = await response.json();
+                const container = document.getElementById('altLinesContainer');
+                
+                if (data.alt_lines && Object.keys(data.alt_lines).length > 0) {
+                    container.innerHTML = Object.entries(data.alt_lines).map(([player, lines]) => `
+                        <div class="alt-line-card">
+                            <div class="alt-player">${player}</div>
+                            ${lines.map(line => `
+                                <div class="alt-line-item">
+                                    <span>Main: ${line.main_line}</span>
+                                    <span>Alt: ${line.alt_line}</span>
+                                    <span class="diff">Diff: ${line.difference > 0 ? '+' : ''}${line.difference}</span>
+                                    <span class="source">${line.source || 'Unknown'}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="no-data">No alternative lines tracked</p>';
+                }
+            } catch (error) {
+                console.error('Error loading alt lines:', error);
+            }
+        }
+
+        async function updateLine() {
+            const player = document.getElementById('editPlayerSelect').value;
+            const oldLine = parseFloat(document.getElementById('oldLineInput').value);
+            const newLine = parseFloat(document.getElementById('newLineInput').value);
+            
+            if (!player || isNaN(oldLine) || isNaN(newLine)) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/update-line', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        player: player,
+                        old_line: oldLine,
+                        new_line: newLine,
+                        stat_type: 'PTS'
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('editResult').innerHTML = 
+                        `<div class="success-msg">✅ ${data.message}</div>`;
+                    // Clear inputs
+                    document.getElementById('oldLineInput').value = '';
+                    document.getElementById('newLineInput').value = '';
+                    // Refresh data
+                    refreshData();
+                } else {
+                    document.getElementById('editResult').innerHTML = 
+                        `<div class="error-msg">❌ ${data.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('editResult').innerHTML = 
+                    `<div class="error-msg">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function removeFromChase(player, statType) {
+            try {
+                const response = await fetch('/api/chase-list', {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({player: player, stat_type: statType})
+                });
+                
+                if (response.ok) {
+                    loadChaseList();
+                }
+            } catch (error) {
+                console.error('Error removing from chase list:', error);
+            }
+        }
+
+        async function loadDailyUpdateStatus() {
+            try {
+                const response = await fetch('/api/daily-update-status');
+                const data = await response.json();
+                const statusEl = document.getElementById('dailyUpdateStatus');
+                
+                if (data.daily_update_scheduled && data.next_run) {
+                    const nextRun = new Date(data.next_run);
+                    const now = new Date();
+                    const hoursUntil = Math.floor((nextRun - now) / (1000 * 60 * 60));
+                    const minsUntil = Math.floor(((nextRun - now) % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    statusEl.textContent = `⏰ Next update: ${hoursUntil}h ${minsUntil}m`;
+                    statusEl.style.color = '#ffd700';
+                } else {
+                    statusEl.textContent = '⏰ Daily update: Not scheduled';
+                    statusEl.style.color = '#888';
+                }
+            } catch (error) {
+                console.error('Error loading update status:', error);
+            }
+        }
+
         // Initial load timestamp
         document.addEventListener('DOMContentLoaded', function() {
             const now = new Date().toLocaleString();
             document.getElementById('lastUpdate').textContent = `Last updated: ${now}`;
+            loadDailyUpdateStatus();
+            // Refresh status every minute
+            setInterval(loadDailyUpdateStatus, 60000);
         });
     </script>
 </body>
