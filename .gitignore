@@ -9,8 +9,11 @@ venv/
 ENV/
 .venv
 
-# Project specific
+# Project specific - data files (should not be committed)
 projections.json
+line_history.json
+chase_list.json
+alt_lines.json
 
 # IDE
 .vscode/
