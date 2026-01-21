@@ -184,4 +184,8 @@ def api_projections():
     })
 
 if __name__ == '__main__':
+    # Development mode
     app.run(debug=True, host='0.0.0.0', port=5000)
+else:
+    # Production mode - disable debug
+    app.config['DEBUG'] = False
