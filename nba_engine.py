@@ -1,5 +1,6 @@
 import pandas as pd
-from nba_api.stats.endpoints import playergamelog, playercareerstats, scoreboard, teamgamelog, teamdashboardbygeneralsplits
+from nba_api.stats.endpoints import playergamelog, playercareerstats, teamgamelog, teamdashboardbygeneralsplits
+# Note: scoreboard removed - not available in all nba_api versions
 from nba_api.stats.static import players, teams
 import time
 from datetime import datetime, timedelta
