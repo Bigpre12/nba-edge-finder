@@ -312,7 +312,7 @@ def index():
     """
     try:
         global MARKET_PROJECTIONS
-        MARKET_PROJECTIONS = get_market_projections()  # Lazy load
+        MARKET_PROJECTIONS = get_market_projections(force_reload=True)  # Always reload to get latest
         
         # Auto-load all active players if projections file is empty or has default values
         # Do this in background to avoid blocking startup
@@ -498,21 +498,33 @@ def api_load_all_players():
         import threading
         def background_load():
             try:
-                print(f"Loading all active players for {stat_type}...")
+                print("=" * 60)
+                print(f"🔄 MANUAL LOAD: Loading all active players for {stat_type}...")
+                print("=" * 60)
                 projections = generate_projections_from_active_players(
                     stat_type=stat_type,
                     season=season
                 )
                 
-                if projections and len(projections) > 0:
-                    save_projections(projections)
-                    global MARKET_PROJECTIONS
-                    MARKET_PROJECTIONS = projections
-                    print(f"Successfully loaded {len(projections)} players for {stat_type}")
+                if projections and len(projections) > 3:
+                    if save_projections(projections):
+                        global MARKET_PROJECTIONS
+                        MARKET_PROJECTIONS = projections
+                        print("=" * 60)
+                        print(f"✅ SUCCESS! Loaded {len(projections)} players for {stat_type}")
+                        print(f"   Sample: {', '.join(list(projections.keys())[:10])}...")
+                        print("=" * 60)
+                    else:
+                        print("❌ Failed to save projections file")
+                elif projections and len(projections) > 0:
+                    print(f"⚠️ Only loaded {len(projections)} players (less than expected)")
+                    if save_projections(projections):
+                        global MARKET_PROJECTIONS
+                        MARKET_PROJECTIONS = projections
                 else:
-                    print(f"Warning: No players loaded for {stat_type}")
+                    print(f"❌ Warning: No players loaded for {stat_type}")
             except Exception as e:
-                print(f"Error loading players: {e}")
+                print(f"❌ Error loading players: {e}")
                 import traceback
                 traceback.print_exc()
         
@@ -523,8 +535,9 @@ def api_load_all_players():
         # Return immediately
         return jsonify({
             'success': True,
-            'message': 'Loading players in background. This may take 10-15 minutes. Check back later.',
-            'status': 'started'
+            'message': f'Loading players in background for {stat_type}. This may take 10-15 minutes. Check Render logs for progress, then refresh the page.',
+            'status': 'started',
+            'note': 'The page will show more players once loading completes. Check the logs for progress.'
         })
             
     except Exception as e:

@@ -1115,6 +1115,16 @@
             btn.disabled = true;
             btn.textContent = '⏳ Loading... (10-15 min)';
             
+            // Show progress indicator
+            const progressDiv = document.getElementById('loadProgress');
+            if (progressDiv) {
+                progressDiv.style.display = 'block';
+                const progressText = document.getElementById('progressText');
+                if (progressText) {
+                    progressText.textContent = 'Starting to load all active NBA players... This will take 10-15 minutes.';
+                }
+            }
+            
             try {
                 const response = await fetch('/api/load-all-players', {
                     method: 'POST',
@@ -1126,22 +1136,53 @@
                 if (data.success) {
                     alert('✅ Player loading started in background!\n\n' + 
                           'This will take 10-15 minutes.\n\n' +
-                          'Check Render logs for progress.\n' +
-                          'Refresh this page in 15 minutes to see all players.');
+                          'IMPORTANT:\n' +
+                          '1. Check Render logs for progress\n' +
+                          '2. Wait 10-15 minutes\n' +
+                          '3. Refresh this page to see all players\n\n' +
+                          'The page will auto-refresh in 2 minutes to check status.');
                     
-                    // Refresh page after 30 seconds to check status
+                    // Refresh page after 2 minutes to check status
                     setTimeout(() => {
                         location.reload();
-                    }, 30000);
+                    }, 120000); // 2 minutes
                 } else {
                     alert('❌ Error: ' + (data.error || 'Failed to start loading'));
                     btn.disabled = false;
                     btn.textContent = originalText;
+                    if (progressDiv) progressDiv.style.display = 'none';
                 }
             } catch (error) {
                 alert('❌ Error: ' + error.message);
                 btn.disabled = false;
                 btn.textContent = originalText;
+                if (progressDiv) progressDiv.style.display = 'none';
+            }
+        }
+        
+        // Check projections status on page load
+        async function checkProjectionsStatus() {
+            try {
+                const response = await fetch('/api/projections');
+                const data = await response.json();
+                
+                if (data.is_default_only) {
+                    const warningDiv = document.createElement('div');
+                    warningDiv.className = 'warning-banner';
+                    warningDiv.style.cssText = 'background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; padding: 15px; margin: 20px 0; border-radius: 8px; text-align: center;';
+                    warningDiv.innerHTML = `
+                        <strong style="color: #f39c12; font-size: 1.1em;">⚠️ Only Default Players Loaded</strong><br>
+                        <p>Currently showing only ${data.count} default players: ${data.default_players.join(', ')}</p>
+                        <p><strong>Click "📥 Load All Active Players" button to load 100+ active NBA players.</strong></p>
+                        <p style="font-size: 0.9em; color: #888;">This takes 10-15 minutes but runs in background.</p>
+                    `;
+                    const container = document.querySelector('.container');
+                    if (container) {
+                        container.insertBefore(warningDiv, container.firstChild);
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking projections status:', error);
             }
         }
         
