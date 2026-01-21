@@ -1,0 +1,22 @@
+name: Keep App Alive
+
+on:
+  schedule:
+    # Run every 13 minutes
+    - cron: '*/13 * * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Website
+        run: |
+          # Replace with your actual website URL
+          URL="${WEBSITE_URL:-https://your-app.onrender.com/ping}"
+          echo "Pinging: $URL"
+          curl -f --max-time 10 "$URL" || exit 1
+          echo "✓ Ping successful"
+        env:
+          # Set this in GitHub Secrets if you want to change the URL
+          WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
