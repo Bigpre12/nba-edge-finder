@@ -6,6 +6,7 @@ from line_tracker import (
     remove_from_chase_list, add_alt_line, get_alt_lines, update_line
 )
 from auth import requires_auth
+from cache_manager import clear_old_cache
 import json
 import os
 import atexit
@@ -19,6 +20,14 @@ except ImportError:
     print("Warning: APScheduler not available. Scheduled updates disabled.")
 
 app = Flask(__name__)
+
+# Enable response compression for faster loading
+try:
+    from flask_compress import Compress
+    Compress(app)
+    print("Response compression enabled")
+except ImportError:
+    print("Flask-Compress not available, compression disabled (optional)")
 
 # File to store projections
 PROJECTIONS_FILE = 'projections.json'
@@ -83,6 +92,10 @@ def init_scheduler():
                 print(f"[{datetime.now()}] Running daily update at 8am...")
                 
                 try:
+                    # Clear old cache before updating
+                    print("Clearing expired cache...")
+                    clear_old_cache()
+                    
                     # Auto-load all active players and generate projections
                     print("Loading all active NBA players...")
                     new_projections = generate_projections_from_active_players(stat_type='PTS', season='2023-24')
@@ -128,8 +141,13 @@ def get_edges_data(show_only_70_plus=True):
     """
     Helper function to fetch edges data.
     Only returns 70%+ probability props by default.
+    Uses caching to improve performance.
     """
     try:
+        # Clear old cache periodically (every 10 calls)
+        import random
+        if random.randint(1, 10) == 1:
+            clear_old_cache()
         from nba_engine import filter_high_probability_props, calculate_hit_probability
         
         # Track line changes before checking edges

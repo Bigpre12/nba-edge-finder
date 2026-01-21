@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 import math
 import re
+from cache_manager import get_cache_key, get_cached_data, set_cached_data
 
 def get_player_id(name):
     """
@@ -23,6 +24,7 @@ def get_player_id(name):
 def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10):
     """
     Fetch recent game-by-game statistics for a player.
+    Uses caching to reduce API calls.
     
     Args:
         player_name (str): Player's full name
@@ -33,6 +35,12 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
     Returns:
         list: List of dictionaries with game data, or None if error
     """
+    # Check cache first
+    cache_key = get_cache_key(player_name, stat_type, season, games)
+    cached_result = get_cached_data(cache_key)
+    if cached_result is not None:
+        return cached_result
+    
     pid = get_player_id(player_name)
     if not pid:
         return None
@@ -66,6 +74,8 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
                 'fga': row.get('FGA', 0),  # Field goals attempted
             })
         
+        # Cache the result
+        set_cached_data(cache_key, game_list)
         return game_list
     except Exception as e:
         print(f"Error fetching games for {player_name}: {e}")

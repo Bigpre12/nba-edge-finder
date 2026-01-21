@@ -732,7 +732,17 @@
             }
         }
 
+        let refreshTimeout = null;
+        let isRefreshing = false;
+        
         async function refreshData() {
+            // Debounce: prevent multiple simultaneous refreshes
+            if (isRefreshing) {
+                console.log('Refresh already in progress, skipping...');
+                return;
+            }
+            
+            isRefreshing = true;
             const refreshBtn = document.getElementById('refreshBtn');
             const loadingIndicator = document.getElementById('loadingIndicator');
             const showAllToggle = document.getElementById('showAllToggle');
@@ -752,6 +762,7 @@
             } finally {
                 refreshBtn.disabled = false;
                 loadingIndicator.style.display = 'none';
+                isRefreshing = false;  // Reset flag
             }
         }
 
