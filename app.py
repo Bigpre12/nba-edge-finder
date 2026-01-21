@@ -497,6 +497,7 @@ def api_load_all_players():
         # Run in background thread to avoid blocking
         import threading
         def background_load():
+            global MARKET_PROJECTIONS
             try:
                 print("=" * 60)
                 print(f"🔄 MANUAL LOAD: Loading all active players for {stat_type}...")
@@ -508,7 +509,6 @@ def api_load_all_players():
                 
                 if projections and len(projections) > 3:
                     if save_projections(projections):
-                        global MARKET_PROJECTIONS
                         MARKET_PROJECTIONS = projections
                         print("=" * 60)
                         print(f"✅ SUCCESS! Loaded {len(projections)} players for {stat_type}")
@@ -519,7 +519,6 @@ def api_load_all_players():
                 elif projections and len(projections) > 0:
                     print(f"⚠️ Only loaded {len(projections)} players (less than expected)")
                     if save_projections(projections):
-                        global MARKET_PROJECTIONS
                         MARKET_PROJECTIONS = projections
                 else:
                     print(f"❌ Warning: No players loaded for {stat_type}")
