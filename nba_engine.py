@@ -188,7 +188,7 @@ def get_all_active_players():
         print(f"Error fetching active players: {e}")
         return []
 
-def get_season_average(player_id, stat_type='PTS', season='2023-24'):
+def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name=None):
     """
     Get a player's season average for a specific stat.
     
@@ -196,6 +196,7 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24'):
         player_id (int): NBA player ID
         stat_type (str): Stat type to fetch (default: 'PTS')
         season (str): NBA season (default: '2023-24')
+        player_name (str): Optional player name for better error messages
     
     Returns:
         float: Season average, None if error or no data
@@ -204,20 +205,48 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24'):
         career_stats = playercareerstats.PlayerCareerStats(player_id=player_id)
         df = career_stats.get_data_frames()[0]
         
+        if df.empty:
+            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+            print(f"   ⚠️ No career stats found for {player_info}")
+            return None
+        
         # Filter for the specific season
         season_df = df[df['SEASON_ID'] == season]
         
         if season_df.empty:
+            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+            print(f"   ⚠️ No data for {player_info} in season {season}")
             return None
         
         if stat_type not in season_df.columns:
+            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+            print(f"   ⚠️ Stat '{stat_type}' not available for {player_info}")
             return None
         
         # Get the average for the season
         avg = season_df[stat_type].mean()
-        return round(avg, 1) if pd.notna(avg) else None
+        if pd.notna(avg):
+            return round(avg, 1)
+        else:
+            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+            print(f"   ⚠️ Average is NaN for {player_info} ({stat_type})")
+            return None
+    except KeyError as e:
+        player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+        print(f"   ⚠️ KeyError fetching season average for {player_info}: {e}")
+        return None
+    except AttributeError as e:
+        player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+        print(f"   ⚠️ AttributeError fetching season average for {player_info}: {e}")
+        return None
     except Exception as e:
-        print(f"Error fetching season average for player {player_id}: {e}")
+        player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+        error_type = type(e).__name__
+        print(f"   ❌ Error fetching season average for {player_info} ({stat_type}, {season}): {error_type}: {e}")
+        import traceback
+        # Only print full traceback for unexpected errors
+        if error_type not in ['KeyError', 'AttributeError', 'ValueError']:
+            traceback.print_exc()
         return None
 
 def generate_projections_from_active_players(stat_type='PTS', season='2023-24', min_games=10, use_season_avg=True):
@@ -247,7 +276,7 @@ def generate_projections_from_active_players(stat_type='PTS', season='2023-24', 
         try:
             # Get season average as projection
             # For combination stats, get_season_average handles it
-            avg = get_season_average(player_id, stat_type=stat_type, season=season)
+            avg = get_season_average(player_id, stat_type=stat_type, season=season, player_name=player_name)
             
             if avg is not None:
                 # Use season average as the projection line
@@ -255,8 +284,11 @@ def generate_projections_from_active_players(stat_type='PTS', season='2023-24', 
                 successful += 1
             else:
                 failed += 1
+                # Only log if it's a real error (not just no data for this season)
+                # The get_season_average function already logs specific issues
         except Exception as e:
-            print(f"   ⚠️ Error getting {player_name}: {e}")
+            error_type = type(e).__name__
+            print(f"   ❌ Exception getting {player_name} (ID: {player_id}): {error_type}: {e}")
             failed += 1
             continue
         
