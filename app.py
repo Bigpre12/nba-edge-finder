@@ -166,6 +166,35 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS'):
         # Track line changes before checking edges
         global MARKET_PROJECTIONS
         MARKET_PROJECTIONS = get_market_projections()
+        
+        # If we have very few players (only defaults), generate projections for all active players for this stat type
+        if len(MARKET_PROJECTIONS) <= 3:
+            print(f"Only {len(MARKET_PROJECTIONS)} players in projections, generating for {stat_type}...")
+            try:
+                # Generate projections for all active players for the selected stat type
+                from nba_engine import get_all_active_players, get_season_average
+                import time
+                active_players = get_all_active_players()
+                temp_projections = {}
+                for i, player in enumerate(active_players[:50]):  # Limit to 50 for speed
+                    try:
+                        player_id = player['id']
+                        player_name = player['full_name']
+                        avg = get_season_average(player_id, stat_type=stat_type, season='2023-24')
+                        if avg is not None:
+                            temp_projections[player_name] = round(avg, 1)
+                        if (i + 1) % 10 == 0:
+                            time.sleep(1)  # Rate limiting
+                    except Exception as e:
+                        print(f"Error getting {player_name} {stat_type}: {e}")
+                        continue
+                
+                if temp_projections:
+                    MARKET_PROJECTIONS = temp_projections
+                    print(f"Generated {len(MARKET_PROJECTIONS)} projections for {stat_type}")
+            except Exception as e:
+                print(f"Error generating projections for {stat_type}: {e}")
+        
         track_line_changes(MARKET_PROJECTIONS)
         
         result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, stat_type=stat_type, include_streaks=True, min_streak=2, include_factors=True)
