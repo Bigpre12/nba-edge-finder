@@ -975,6 +975,20 @@
             refreshData();
         }
 
+        function changeStatType() {
+            const statType = document.getElementById('statTypeSelect').value;
+            const statDesc = document.getElementById('statDescription');
+            
+            // Update description
+            const statCategories = {{ stat_categories|tojson }};
+            if (statCategories[statType]) {
+                statDesc.textContent = statCategories[statType].description;
+            }
+            
+            // Refresh data with new stat type
+            refreshData();
+        }
+
         function toggleAutoRefresh() {
             const checkbox = document.getElementById('autoRefresh');
             

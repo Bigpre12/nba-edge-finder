@@ -12,6 +12,10 @@ from advanced_analytics import (
     enhance_edge_with_analytics, sort_edges_by_ev, sort_edges_by_market_edge,
     sort_edges_by_grade, apply_tactical_filters, get_sort_options, get_filter_options
 )
+from stat_categories import (
+    get_stat_categories, get_individual_stats, get_combination_stats,
+    get_stat_display_name, is_valid_stat_type
+)
 import json
 import os
 import atexit
@@ -232,10 +236,31 @@ def index():
         # Start in background thread, don't wait
         threading.Thread(target=background_load, daemon=True).start()
     
+    # Get selected stat type from request or default to PTS
+    stat_type = request.args.get('stat_type', 'PTS')
+    if not is_valid_stat_type(stat_type):
+        stat_type = 'PTS'
+    
     # Get edges - only 70%+ probability by default
     # This will work even if players are still loading
-    edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True)
-    return render_template('index.html', edges=edges, streaks=streaks, high_prob_props=high_prob_props, parlay_recommendations=parlay_recommendations, projections=MARKET_PROJECTIONS, error=error)
+    edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True, stat_type=stat_type)
+    
+    # Get stat categories for UI
+    stat_categories = get_stat_categories()
+    individual_stats = get_individual_stats()
+    combination_stats = get_combination_stats()
+    
+    return render_template('index.html', 
+                         edges=edges, 
+                         streaks=streaks, 
+                         high_prob_props=high_prob_props, 
+                         parlay_recommendations=parlay_recommendations, 
+                         projections=MARKET_PROJECTIONS, 
+                         error=error,
+                         stat_categories=stat_categories,
+                         individual_stats=individual_stats,
+                         combination_stats=combination_stats,
+                         current_stat_type=stat_type)
 
 @app.route('/api/edges')
 @requires_auth

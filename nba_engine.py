@@ -195,7 +195,7 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24'):
         print(f"Error fetching season average for player {player_id}: {e}")
         return None
 
-def generate_projections_from_active_players(stat_type='PTS', season='2023-24', min_games=10):
+def generate_projections_from_active_players(stat_type='PTS', season='2023-24', min_games=10, use_season_avg=True):
     """
     Generate projections for all active players based on their season averages.
     
