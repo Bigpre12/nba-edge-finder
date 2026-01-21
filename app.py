@@ -224,16 +224,16 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
             edges.append(edge)
         
         # Apply tactical filters
-        filtered_edges = apply_tactical_filters(
-            edges,
-            min_probability=min_probability,
-            min_ev=min_ev,
-            min_market_edge=min_market_edge,
-            min_grade=min_grade,
-            positive_ev_only=positive_ev_only,
-            exclude_injuries=exclude_injuries,
-            exclude_rotation=exclude_rotation
-        )
+        filter_dict = {
+            'min_probability': min_probability,
+            'min_ev': min_ev,
+            'min_market_edge': min_market_edge,
+            'min_grade': min_grade,
+            'positive_ev_only': positive_ev_only,
+            'exclude_injuries': exclude_injuries,
+            'exclude_rotation_changes': exclude_rotation
+        }
+        filtered_edges = apply_tactical_filters(edges, filter_dict)
         
         # Filter to 70%+ if requested (but respect min_probability if higher)
         if show_only_70_plus:
