@@ -62,6 +62,11 @@ def worker_exit(server, worker):
     """Called just after a worker has been exited, in the master process."""
     print(f"Worker {worker.pid} exited (master process)")
 
+def worker_term(worker):
+    """Called when a worker receives the SIGTERM signal."""
+    print(f"Worker {worker.pid} received SIGTERM - shutting down gracefully")
+    # This is normal - workers are restarted periodically to prevent memory leaks
+
 def worker_int(worker):
     """Called when a worker receives the SIGINT or SIGQUIT signal."""
     print(f"Worker {worker.pid} interrupted")
