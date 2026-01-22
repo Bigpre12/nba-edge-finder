@@ -872,13 +872,7 @@ def api_glitched_props():
                     'error': 'Rating must be between 1 and 10'
                 }), 400
             
-            result = add_glitched_prop({
-                'prop': prop,
-                'reasoning': reasoning,
-                'rating': rating,
-                'platform': platform
-            })
-            if result:
+            if add_glitched_prop(prop, reasoning, rating, platform):
                 return jsonify({
                     'success': True,
                     'message': 'Glitched prop added successfully',
@@ -911,18 +905,7 @@ def api_glitched_props():
                     'error': 'Rating must be between 1 and 10'
                 }), 400
             
-            updated_data = {}
-            if prop is not None:
-                updated_data['prop'] = prop
-            if reasoning is not None:
-                updated_data['reasoning'] = reasoning
-            if rating is not None:
-                updated_data['rating'] = rating
-            if platform is not None:
-                updated_data['platform'] = platform
-            
-            result = update_glitched_prop(prop_id, updated_data)
-            if result:
+            if update_glitched_prop(prop_id, prop, reasoning, rating, platform):
                 return jsonify({
                     'success': True,
                     'message': 'Glitched prop updated successfully',
