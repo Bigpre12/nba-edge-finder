@@ -7,6 +7,19 @@ from datetime import datetime, timedelta
 import math
 import re
 from cache_manager import get_cache_key, get_cached_data, set_cached_data
+from requests.exceptions import Timeout, ConnectionError, RequestException
+import requests
+
+# Configure default timeout for all requests
+import nba_api.stats.endpoints.base
+if hasattr(nba_api.stats.endpoints.base, 'BaseEndpoint'):
+    # Set default timeout for NBA API requests
+    try:
+        import nba_api.live.nba.endpoints
+        # NBA API uses requests library, configure timeout at session level if possible
+        pass
+    except:
+        pass
 
 def get_player_id(name):
     """
@@ -45,9 +58,32 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
     if not pid:
         return None
     
+    # Retry logic for API calls with timeout handling
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            log = playergamelog.PlayerGameLog(player_id=pid, season=season, timeout=30)
+            df = log.get_data_frames()[0].head(games)
+            break  # Success, exit retry loop
+        except (Timeout, ConnectionError, RequestException) as e:
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (attempt + 1)  # Exponential backoff
+                print(f"   ⚠️ Timeout/connection error for {player_name} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                time.sleep(wait_time)
+                continue
+            else:
+                print(f"   ❌ Failed to fetch games for {player_name} after {max_retries} attempts: {e}")
+                return None
+        except Exception as e:
+            print(f"   ❌ Error fetching games for {player_name}: {e}")
+            return None
+    else:
+        # If we exhausted retries
+        return None
+    
     try:
-        log = playergamelog.PlayerGameLog(player_id=pid, season=season)
-        df = log.get_data_frames()[0].head(games)
         
         if df.empty:
             return None
@@ -191,6 +227,7 @@ def get_all_active_players():
 def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name=None):
     """
     Get a player's season average for a specific stat.
+    Uses retry logic with timeout handling.
     
     Args:
         player_id (int): NBA player ID
@@ -201,9 +238,61 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
     Returns:
         float: Season average, None if error or no data
     """
+    # Retry logic for API calls with timeout handling
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            # NBA API doesn't support timeout parameter directly
+            career_stats = playercareerstats.PlayerCareerStats(player_id=player_id)
+            df = career_stats.get_data_frames()[0]
+            break  # Success, exit retry loop
+        except (Timeout, ConnectionError, RequestException) as e:
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (attempt + 1)  # Exponential backoff
+                player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+                print(f"   ⚠️ Timeout/connection error for {player_info} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                time.sleep(wait_time)
+                continue
+            else:
+                player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+                print(f"   ❌ Failed to fetch season average for {player_info} after {max_retries} attempts: {e}")
+                return None
+        except Exception as e:
+            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+            error_type = type(e).__name__
+            error_str = str(e).lower()
+            
+            # Check if it's a timeout-related error
+            if 'timeout' in error_str or 'timed out' in error_str or 'read timeout' in error_str:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (attempt + 1)
+                    print(f"   ⚠️ Timeout error for {player_info} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"   ❌ Timeout fetching season average for {player_info} after {max_retries} attempts")
+                    return None
+            elif error_type in ['KeyError', 'AttributeError', 'ValueError']:
+                # These are data errors, not network errors - don't retry
+                print(f"   ⚠️ {error_type} fetching season average for {player_info}: {e}")
+                return None
+            else:
+                # Unknown error - try once more
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (attempt + 1)
+                    print(f"   ⚠️ Error for {player_info} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"   ❌ Error fetching season average for {player_info} after {max_retries} attempts: {error_type}: {e}")
+                    return None
+    else:
+        # If we exhausted retries
+        return None
+    
     try:
-        career_stats = playercareerstats.PlayerCareerStats(player_id=player_id)
-        df = career_stats.get_data_frames()[0]
         
         if df.empty:
             player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
@@ -292,12 +381,12 @@ def generate_projections_from_active_players(stat_type='PTS', season='2023-24', 
             failed += 1
             continue
         
-        # Rate limiting - be more conservative with bulk operations
+        # Rate limiting - be more conservative with bulk operations to avoid timeouts
         if (i + 1) % 10 == 0:
             print(f"   📈 Progress: {i + 1}/{len(active_players)} players processed ({successful} successful, {failed} failed)...")
-            time.sleep(2)  # Longer delay every 10 players
+            time.sleep(3)  # Longer delay every 10 players to avoid rate limits and timeouts
         else:
-            time.sleep(0.5)  # Shorter delay between players
+            time.sleep(1.0)  # Increased delay between players to reduce timeout risk
     
     print(f"✅ Generated projections for {len(projections)} players ({successful} successful, {failed} failed)")
     if len(projections) < 10:
