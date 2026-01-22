@@ -1282,39 +1282,60 @@
         }
 
         async function refreshData() {
+            console.log('[DEBUG] refreshData() called');
+            
             // Debounce: prevent multiple simultaneous refreshes
             if (isRefreshing) {
-                console.log('Refresh already in progress, skipping...');
+                console.log('[DEBUG] Refresh already in progress, skipping...');
                 return Promise.resolve();
             }
             
             isRefreshing = true;
             const refreshBtn = document.getElementById('refreshBtn');
             const loadingIndicator = document.getElementById('loadingIndicator');
-            const showAllToggle = document.getElementById('showAllToggle');
-            const showAll = showAllToggle ? showAllToggle.checked : false;
+            const errorContainer = document.getElementById('errorContainer');
             
-            if (refreshBtn) refreshBtn.disabled = true;
+            // Visual feedback - change button text
+            const originalBtnText = refreshBtn ? refreshBtn.textContent : '';
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.textContent = '⏳ Loading...';
+            }
             if (loadingIndicator) loadingIndicator.style.display = 'inline';
+            if (errorContainer) errorContainer.innerHTML = '';
             
             try {
                 const filterParams = buildFilterParams();
                 const url = '/api/edges' + (filterParams ? '?' + filterParams : '');
+                console.log('[DEBUG] Fetching:', url);
+                
                 const response = await fetch(url);
+                console.log('[DEBUG] Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('[DEBUG] Data received, edges:', data.edges?.length || 0);
+                
                 updatePage(data);
-                return Promise.resolve(data); // Return data for chaining
+                return Promise.resolve(data);
             } catch (error) {
-                const errorContainer = document.getElementById('errorContainer');
+                console.error('[DEBUG] refreshData error:', error);
                 if (errorContainer) {
                     errorContainer.innerHTML = 
-                        `<div class="error-message"><strong>Error:</strong> Failed to fetch data: ${error.message}</div>`;
+                        `<div class="error-message"><strong>Error:</strong> ${error.message}. Click Refresh to retry.</div>`;
                 }
                 return Promise.reject(error);
             } finally {
-                if (refreshBtn) refreshBtn.disabled = false;
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.textContent = originalBtnText || '🔄 Refresh Edges';
+                }
                 if (loadingIndicator) loadingIndicator.style.display = 'none';
-                isRefreshing = false;  // Reset flag
+                isRefreshing = false;
+                console.log('[DEBUG] refreshData() completed');
             }
         }
 
@@ -1323,16 +1344,19 @@
         }
 
         function changeStatType() {
+            console.log('[DEBUG] changeStatType() called');
             try {
                 const statTypeSelect = document.getElementById('statTypeSelect');
                 const statDesc = document.getElementById('statDescription');
                 
                 if (!statTypeSelect) {
-                    console.error('Stat type select not found');
+                    console.error('[DEBUG] Stat type select not found');
+                    alert('Stat type selector not found. Please refresh the page.');
                     return;
                 }
                 
                 const statType = statTypeSelect.value;
+                console.log('[DEBUG] Selected stat type:', statType);
                 
                 // Update description
                 const statCategories = {{ stat_categories|tojson|default('{}') }};
@@ -1350,13 +1374,17 @@
         }
 
         function setMinProbability(minProb) {
+            console.log('[DEBUG] setMinProbability() called with:', minProb);
             try {
                 currentMinProbability = minProb;
                 
-                // Update active tab styling
+                // Update active tab styling with visual feedback
                 document.querySelectorAll('.prob-tab').forEach(tab => tab.classList.remove('active'));
                 const probEl = document.getElementById(minProb === 60 ? 'prob60' : minProb === 70 ? 'prob70' : minProb === 80 ? 'prob80' : 'probAll');
-                if (probEl) probEl.classList.add('active');
+                if (probEl) {
+                    probEl.classList.add('active');
+                    console.log('[DEBUG] Activated tab:', probEl.id);
+                }
                 
                 // Update the min probability filter slider if it exists
                 const minProbFilter = document.getElementById('minProbFilter');
@@ -1383,6 +1411,7 @@
                 }
                 
                 // Refresh data with new filter
+                console.log('[DEBUG] Calling refreshData from setMinProbability');
                 if (typeof refreshData === 'function') {
                     refreshData();
                 }
@@ -1410,16 +1439,22 @@
 
         // Load ALL active players (not just relevant ones) - unified function
         async function loadAllPlayers() {
+            console.log('[DEBUG] loadAllPlayers() called');
             const btn = document.getElementById('loadAllBtn');
-            if (!btn) return;
+            if (!btn) {
+                console.error('[DEBUG] loadAllBtn not found');
+                return;
+            }
             
             if (!confirm('This will load ALL active NBA players (500+ players).\n\n' +
                         'This takes 10-15 minutes due to API rate limits.\n\n' +
                         'The page will auto-refresh every 30 seconds to show progress.\n\n' +
                         'Continue?')) {
+                console.log('[DEBUG] User cancelled loadAllPlayers');
                 return;
             }
             
+            console.log('[DEBUG] Starting player load');
             const originalText = btn.textContent;
             btn.disabled = true;
             btn.textContent = '⏳ Loading All Players...';
@@ -1562,20 +1597,36 @@
 
         // Line Management Functions
         function showLineManagement() {
+            console.log('[DEBUG] showLineManagement() called');
             try {
                 const panel = document.getElementById('lineManagementPanel');
                 if (!panel) {
-                    console.error('lineManagementPanel element not found');
+                    console.error('[DEBUG] lineManagementPanel element not found');
                     alert('Line Management panel not found. Please refresh the page.');
                     return;
                 }
+                console.log('[DEBUG] Showing line management panel');
                 panel.style.display = 'block';
-                if (typeof loadLineChanges === 'function') loadLineChanges();
-                if (typeof loadChaseList === 'function') loadChaseList();
-                if (typeof loadAltLines === 'function') loadAltLines();
-                if (typeof loadDailyUpdateStatus === 'function') loadDailyUpdateStatus();
+                
+                // Load data with error handling for each
+                if (typeof loadLineChanges === 'function') {
+                    console.log('[DEBUG] Calling loadLineChanges');
+                    loadLineChanges().catch(e => console.error('[DEBUG] loadLineChanges error:', e));
+                }
+                if (typeof loadChaseList === 'function') {
+                    console.log('[DEBUG] Calling loadChaseList');
+                    loadChaseList().catch(e => console.error('[DEBUG] loadChaseList error:', e));
+                }
+                if (typeof loadAltLines === 'function') {
+                    console.log('[DEBUG] Calling loadAltLines');
+                    loadAltLines().catch(e => console.error('[DEBUG] loadAltLines error:', e));
+                }
+                if (typeof loadDailyUpdateStatus === 'function') {
+                    console.log('[DEBUG] Calling loadDailyUpdateStatus');
+                    loadDailyUpdateStatus().catch(e => console.error('[DEBUG] loadDailyUpdateStatus error:', e));
+                }
             } catch (error) {
-                console.error('Error showing line management:', error);
+                console.error('[DEBUG] Error showing line management:', error);
                 alert('Error opening Line Management: ' + error.message);
             }
         }
@@ -1599,10 +1650,17 @@
         }
 
         async function loadLineChanges() {
+            console.log('[DEBUG] loadLineChanges() called');
+            const container = document.getElementById('lineChangesContainer');
             try {
+                if (container) container.innerHTML = '<div class="loading-msg">Loading line changes...</div>';
+                
                 const response = await fetch('/api/line-changes');
+                console.log('[DEBUG] loadLineChanges response:', response.status);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
                 const data = await response.json();
-                const container = document.getElementById('lineChangesContainer');
                 
                 if (data.changes && Object.keys(data.changes).length > 0) {
                     container.innerHTML = Object.entries(data.changes).map(([player, change]) => `
@@ -1621,15 +1679,19 @@
                     container.innerHTML = '<p class="no-data">No line changes detected in last 24h</p>';
                 }
             } catch (error) {
-                console.error('Error loading line changes:', error);
+                console.error('[DEBUG] Error loading line changes:', error);
+                if (container) container.innerHTML = `<p class="error-msg">Failed to load: ${error.message}</p>`;
             }
         }
 
         async function loadChaseList() {
+            console.log('[DEBUG] loadChaseList() called');
+            const container = document.getElementById('chaseListContainer');
             try {
+                if (container) container.innerHTML = '<div class="loading-msg">Loading chase list...</div>';
+                
                 const response = await fetch('/api/chase-list');
-                const data = await response.json();
-                const container = document.getElementById('chaseListContainer');
+                console.log('[DEBUG] loadChaseList response:', response.status);
                 
                 if (data.chase_list && data.chase_list.length > 0) {
                     container.innerHTML = data.chase_list.map(item => `
@@ -1644,15 +1706,23 @@
                     container.innerHTML = '<p class="no-data">No props in chase list</p>';
                 }
             } catch (error) {
-                console.error('Error loading chase list:', error);
+                console.error('[DEBUG] Error loading chase list:', error);
+                if (container) container.innerHTML = `<p class="error-msg">Failed to load: ${error.message}</p>`;
             }
         }
 
         async function loadAltLines() {
+            console.log('[DEBUG] loadAltLines() called');
+            const container = document.getElementById('altLinesContainer');
             try {
+                if (container) container.innerHTML = '<div class="loading-msg">Loading alt lines...</div>';
+                
                 const response = await fetch('/api/alt-lines');
+                console.log('[DEBUG] loadAltLines response:', response.status);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
                 const data = await response.json();
-                const container = document.getElementById('altLinesContainer');
                 
                 if (data.alt_lines && Object.keys(data.alt_lines).length > 0) {
                     container.innerHTML = Object.entries(data.alt_lines).map(([player, lines]) => `
@@ -1672,7 +1742,8 @@
                     container.innerHTML = '<p class="no-data">No alternative lines tracked</p>';
                 }
             } catch (error) {
-                console.error('Error loading alt lines:', error);
+                console.error('[DEBUG] Error loading alt lines:', error);
+                if (container) container.innerHTML = `<p class="error-msg">Failed to load: ${error.message}</p>`;
             }
         }
 
@@ -1734,40 +1805,53 @@
         }
 
         async function loadDailyUpdateStatus() {
+            console.log('[DEBUG] loadDailyUpdateStatus() called');
+            const statusEl = document.getElementById('dailyUpdateStatus');
             try {
                 const response = await fetch('/api/daily-update-status');
-                const data = await response.json();
-                const statusEl = document.getElementById('dailyUpdateStatus');
+                console.log('[DEBUG] loadDailyUpdateStatus response:', response.status);
                 
-                if (data.daily_update_scheduled && data.next_run) {
-                    const nextRun = new Date(data.next_run);
-                    const now = new Date();
-                    const hoursUntil = Math.floor((nextRun - now) / (1000 * 60 * 60));
-                    const minsUntil = Math.floor(((nextRun - now) % (1000 * 60 * 60)) / (1000 * 60));
-                    
-                    statusEl.textContent = `⏰ Next update: ${hoursUntil}h ${minsUntil}m`;
-                    statusEl.style.color = '#ffd700';
-                } else {
-                    statusEl.textContent = '⏰ Daily update: Not scheduled';
-                    statusEl.style.color = '#888';
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (statusEl) {
+                    if (data.daily_update_scheduled && data.next_run) {
+                        const nextRun = new Date(data.next_run);
+                        const now = new Date();
+                        const hoursUntil = Math.floor((nextRun - now) / (1000 * 60 * 60));
+                        const minsUntil = Math.floor(((nextRun - now) % (1000 * 60 * 60)) / (1000 * 60));
+                        
+                        statusEl.textContent = `Next update: ${hoursUntil}h ${minsUntil}m`;
+                        statusEl.style.color = '#ffd700';
+                    } else {
+                        statusEl.textContent = 'Daily update: Not scheduled';
+                        statusEl.style.color = '#888';
+                    }
                 }
             } catch (error) {
-                console.error('Error loading update status:', error);
+                console.error('[DEBUG] Error loading update status:', error);
+                if (statusEl) {
+                    statusEl.textContent = 'Status unavailable';
+                    statusEl.style.color = '#e74c3c';
+                }
             }
         }
 
         // Tactical Filters Functions
         function showTacticalFilters() {
+            console.log('[DEBUG] showTacticalFilters() called');
             try {
                 const panel = document.getElementById('tacticalFiltersPanel');
                 if (!panel) {
-                    console.error('tacticalFiltersPanel element not found');
+                    console.error('[DEBUG] tacticalFiltersPanel element not found');
                     alert('Tactical Filters panel not found. Please refresh the page.');
                     return;
                 }
+                console.log('[DEBUG] Showing tactical filters panel');
                 panel.style.display = 'block';
             } catch (error) {
-                console.error('Error showing tactical filters:', error);
+                console.error('[DEBUG] Error showing tactical filters:', error);
                 alert('Error opening Tactical Filters: ' + error.message);
             }
         }

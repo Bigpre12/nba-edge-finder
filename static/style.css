@@ -1216,6 +1216,36 @@ header h1 {
     padding: 20px;
 }
 
+/* Loading and Error Messages */
+.loading-msg {
+    color: #ffd700;
+    padding: 15px;
+    text-align: center;
+    font-style: italic;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.error-msg {
+    color: #e74c3c;
+    padding: 15px;
+    text-align: center;
+    background: rgba(231, 76, 60, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.no-data {
+    color: #888;
+    padding: 15px;
+    text-align: center;
+    font-style: italic;
+}
+
 .load-progress {
     margin: 20px 0;
     padding: 20px;
