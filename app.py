@@ -118,7 +118,10 @@ def get_market_projections(force_reload=False):
     if not _projections_loaded or force_reload:
         MARKET_PROJECTIONS = load_projections()
         _projections_loaded = True
-        print(f"📊 Current market projections: {len(MARKET_PROJECTIONS)} players")
+        print(f"📊 Loaded {len(MARKET_PROJECTIONS)} players from projections file")
+        if len(MARKET_PROJECTIONS) <= 3:
+            print(f"⚠️ Only {len(MARKET_PROJECTIONS)} players loaded - background auto-load should trigger")
+            print(f"   Players: {', '.join(list(MARKET_PROJECTIONS.keys()))}")
     return MARKET_PROJECTIONS
 
 # Initialize scheduler for daily updates (only start if not already running)
