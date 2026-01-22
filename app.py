@@ -106,16 +106,9 @@ print(f"Startup: Loaded {len(MARKET_PROJECTIONS)} players from projections file"
 
 # If no players loaded, start background loading immediately on startup
 if len(MARKET_PROJECTIONS) == 0:
-    print("WARNING: No players found - starting background load on startup...")
-    import threading
-    import time
-    
-    def startup_background_load():
-        """Load players in background during app startup."""
-        global MARKET_PROJECTIONS
-        print("=" * 60)
-        print("STARTUP AUTO-LOAD: Loading players in background...")
-        print("=" * 60)
+    print("INFO: No players found in projections file - background load will start on first request")
+    # Don't start loading here - let the index route handle it to avoid duplicate loads
+    # This prevents memory issues and ensures proper coordination
         try:
             from nba_engine import get_all_active_players, get_season_average
             
