@@ -70,7 +70,7 @@ def save_projections(projections):
     """Save projections to file."""
     try:
         if not projections or len(projections) == 0:
-            print("⚠️ Warning: Attempted to save empty projections")
+            print("WARNING: Attempted to save empty projections")
             return False
         
         # No longer adding default players - save what we have
@@ -84,18 +84,18 @@ def save_projections(projections):
         # Verify it was saved
         if os.path.exists(PROJECTIONS_FILE):
             file_size = os.path.getsize(PROJECTIONS_FILE)
-            print(f"✅ Successfully saved {len(projections)} players to {PROJECTIONS_FILE}")
+            print(f"SUCCESS: Successfully saved {len(projections)} players to {PROJECTIONS_FILE}")
             print(f"   File size: {file_size} bytes")
             print(f"   Sample players saved: {', '.join(list(projections.keys())[:5])}...")
             return True
         else:
-            print(f"❌ File was not created at {file_path}")
+            print(f"ERROR: File was not created at {file_path}")
             return False
     except PermissionError as e:
-        print(f"❌ Permission denied saving to {PROJECTIONS_FILE}: {e}")
+        print(f"ERROR: Permission denied saving to {PROJECTIONS_FILE}: {e}")
         return False
     except Exception as e:
-        print(f"❌ Error saving projections: {e}")
+        print(f"ERROR: Error saving projections: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -357,14 +357,24 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         # Calculate probability and enhance with analytics for each edge
         edges = []
         for edge in all_edges:
-            factors = edge.get('factors', {})
-            streak_info = edge.get('streak', {}) if edge.get('streak', {}).get('active') else None
-            probability = calculate_hit_probability(edge, factors, streak_info)
-            edge['probability'] = probability
-            
-            # Enhance with advanced analytics (EV, grades, etc.)
-            edge = enhance_edge_with_analytics(edge, default_odds=-110)
-            edges.append(edge)
+            try:
+                factors = edge.get('factors', {})
+                streak_info = edge.get('streak', {}) if edge.get('streak', {}).get('active') else None
+                probability = calculate_hit_probability(edge, factors, streak_info)
+                edge['probability'] = probability
+                
+                # Enhance with advanced analytics (EV, grades, etc.)
+                try:
+                    edge = enhance_edge_with_analytics(edge, default_odds=-110)
+                except Exception as e:
+                    print(f"Warning: Error enhancing edge with analytics: {e}")
+                    # Continue without analytics enhancement
+                
+                edges.append(edge)
+            except Exception as e:
+                print(f"Warning: Error processing edge: {e}")
+                # Skip this edge and continue
+                continue
         
         # Apply tactical filters
         try:
@@ -475,13 +485,13 @@ def index():
                     all_players = get_all_active_players()
                     
                     if not all_players:
-                        print("❌ No active players available from NBA API")
+                        print("ERROR: No active players available from NBA API")
                         app._loading_players = False
                         return
                     
                     # Load top 50 players (enough to get started)
                     players_to_load = all_players[:50]
-                    print(f"📊 Loading projections for {len(players_to_load)} players...")
+                    print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}
                     loaded_count = 0
@@ -503,7 +513,7 @@ def index():
                             
                             # Progress logging every 10 players
                             if (i + 1) % 10 == 0:
-                                print(f"   📈 Progress: {i + 1}/{len(players_to_load)} processed ({loaded_count} loaded, {failed_count} skipped)...")
+                                print(f"   Progress: {i + 1}/{len(players_to_load)} processed ({loaded_count} loaded, {failed_count} skipped)...")
                             
                             # Rate limiting - more conservative to avoid timeouts
                             if (i + 1) % 10 == 0:
@@ -518,7 +528,7 @@ def index():
                             # Only log unexpected errors (not "no data" which is normal)
                             error_str = str(e).lower()
                             if 'no data' not in error_str and 'empty' not in error_str:
-                                print(f"   ⚠️ Unexpected error loading {player_name}: {type(e).__name__}: {e}")
+                                print(f"   WARNING: Unexpected error loading {player_name}: {type(e).__name__}: {e}")
                             continue
                     
                     # No default players - save whatever we loaded
@@ -527,19 +537,19 @@ def index():
                         if save_projections(new_projections):
                             MARKET_PROJECTIONS = new_projections
                             print("=" * 60)
-                            print(f"✅ SUCCESS! Loaded {len(MARKET_PROJECTIONS)} players for PTS")
+                            print(f"SUCCESS! Loaded {len(MARKET_PROJECTIONS)} players for PTS")
                             print(f"   Sample: {', '.join(list(new_projections.keys())[:15])}...")
                             print("=" * 60)
-                            print(f"📊 Projections saved to {PROJECTIONS_FILE}")
+                            print(f"Projections saved to {PROJECTIONS_FILE}")
                             print(f"   Frontend will auto-refresh to show new players")
                         else:
-                            print("❌ Failed to save projections file")
+                            print("ERROR: Failed to save projections file")
                     else:
-                        print(f"⚠️ Warning: No players loaded")
+                        print(f"WARNING: No players loaded")
                         print("   This might be due to NBA API rate limits or network issues.")
                         print(f"   Current projections still have {len(MARKET_PROJECTIONS)} players")
                 except Exception as e:
-                    print(f"❌ Error auto-loading players: {e}")
+                    print(f"ERROR: Error auto-loading players: {e}")
                     import traceback
                     traceback.print_exc()
                 finally:
@@ -559,7 +569,7 @@ def index():
             # Also check if loading flag is stuck (older than 10 minutes = probably crashed)
             if hasattr(app, '_loading_start_time'):
                 if time_module.time() - app._loading_start_time > 600:  # 10 minutes
-                    print("⚠️ Previous load thread appears stuck (10+ min), resetting flag...")
+                    print("WARNING: Previous load thread appears stuck (10+ min), resetting flag...")
                     app._loading_players = False
             
             if not app._loading_players:
@@ -568,13 +578,13 @@ def index():
                 # Start in background thread, don't wait
                 load_thread = threading.Thread(target=background_load, daemon=True)
                 load_thread.start()
-                print(f"🚀 Started background thread to load players...")
+                print(f"Started background thread to load players...")
                 print(f"   Current projections: {len(MARKET_PROJECTIONS)} players")
                 print(f"   Thread will run in background and save to {PROJECTIONS_FILE}")
                 print(f"   Check logs for progress updates...")
             else:
                 elapsed = int((time_module.time() - app._loading_start_time) / 60) if hasattr(app, '_loading_start_time') else 0
-                print(f"⏳ Player loading already in progress (started {elapsed} min ago), skipping duplicate trigger...")
+                print(f"Player loading already in progress (started {elapsed} min ago), skipping duplicate trigger...")
                 print(f"   If stuck, restart the app or wait for completion.")
         
         # Get selected stat type from request or default to PTS
@@ -742,7 +752,7 @@ def api_load_all_players():
             global MARKET_PROJECTIONS
             try:
                 print("=" * 60)
-                print(f"🔄 MANUAL LOAD: Loading all active players for {stat_type}...")
+                print(f"MANUAL LOAD: Loading all active players for {stat_type}...")
                 print("=" * 60)
                 projections = generate_projections_from_active_players(
                     stat_type=stat_type,
@@ -753,15 +763,15 @@ def api_load_all_players():
                     if save_projections(projections):
                         MARKET_PROJECTIONS = projections
                         print("=" * 60)
-                        print(f"✅ SUCCESS! Loaded {len(projections)} players for {stat_type}")
+                        print(f"SUCCESS: Loaded {len(projections)} players for {stat_type}")
                         print(f"   Sample: {', '.join(list(projections.keys())[:10])}...")
                         print("=" * 60)
                     else:
-                        print("❌ Failed to save projections file")
+                        print("ERROR: Failed to save projections file")
                 else:
-                    print(f"❌ Warning: No players loaded for {stat_type}")
+                    print(f"WARNING: No players loaded for {stat_type}")
             except Exception as e:
-                print(f"❌ Error loading players: {e}")
+                print(f"ERROR: Error loading players: {e}")
                 import traceback
                 traceback.print_exc()
         
