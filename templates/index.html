@@ -1320,55 +1320,72 @@
         }
 
         function changeStatType() {
-            const statType = document.getElementById('statTypeSelect').value;
-            const statDesc = document.getElementById('statDescription');
-            
-            // Update description
-            const statCategories = {{ stat_categories|tojson }};
-            if (statCategories[statType]) {
-                statDesc.textContent = statCategories[statType].description;
+            try {
+                const statTypeSelect = document.getElementById('statTypeSelect');
+                const statDesc = document.getElementById('statDescription');
+                
+                if (!statTypeSelect) {
+                    console.error('Stat type select not found');
+                    return;
+                }
+                
+                const statType = statTypeSelect.value;
+                
+                // Update description
+                const statCategories = {{ stat_categories|tojson|default('{}') }};
+                if (statCategories && statCategories[statType] && statDesc) {
+                    statDesc.textContent = statCategories[statType].description || '';
+                }
+                
+                // Refresh data with new stat type
+                if (typeof refreshData === 'function') {
+                    refreshData();
+                }
+            } catch (e) {
+                console.error('Error in changeStatType:', e);
             }
-            
-            // Refresh data with new stat type
-            refreshData();
         }
 
         function setMinProbability(minProb) {
-            currentMinProbability = minProb;
-            
-            // Update active tab styling
-            document.querySelectorAll('.prob-tab').forEach(tab => tab.classList.remove('active'));
-            if (minProb === 60) document.getElementById('prob60').classList.add('active');
-            else if (minProb === 70) document.getElementById('prob70').classList.add('active');
-            else if (minProb === 80) document.getElementById('prob80').classList.add('active');
-            else document.getElementById('probAll').classList.add('active');
-            
-            // Update the min probability filter slider if it exists
-            const minProbFilter = document.getElementById('minProbFilter');
-            if (minProbFilter) {
-                minProbFilter.value = minProb || 50;
-                const probValue = document.getElementById('probValue');
-                if (probValue) probValue.textContent = minProb || 50;
-            }
-            
-            // Update the show all toggle based on probability
-            const showAllToggle = document.getElementById('showAllToggle');
-            if (showAllToggle) {
-                showAllToggle.checked = (minProb === 0);
-            }
-            
-            // Update subtitle text
-            const subtitle = document.querySelector('.subtitle');
-            if (subtitle) {
-                if (minProb === 0) {
-                    subtitle.textContent = 'Sharp angles. No fluff. Pure edge. | Showing ALL props';
-                } else {
-                    subtitle.textContent = `Sharp angles. No fluff. Pure edge. | Showing ${minProb}%+ probability props only`;
+            try {
+                currentMinProbability = minProb;
+                
+                // Update active tab styling
+                document.querySelectorAll('.prob-tab').forEach(tab => tab.classList.remove('active'));
+                const probEl = document.getElementById(minProb === 60 ? 'prob60' : minProb === 70 ? 'prob70' : minProb === 80 ? 'prob80' : 'probAll');
+                if (probEl) probEl.classList.add('active');
+                
+                // Update the min probability filter slider if it exists
+                const minProbFilter = document.getElementById('minProbFilter');
+                if (minProbFilter) {
+                    minProbFilter.value = minProb || 50;
+                    const probValue = document.getElementById('probValue');
+                    if (probValue) probValue.textContent = minProb || 50;
                 }
+                
+                // Update the show all toggle based on probability
+                const showAllToggle = document.getElementById('showAllToggle');
+                if (showAllToggle) {
+                    showAllToggle.checked = (minProb === 0);
+                }
+                
+                // Update subtitle text
+                const subtitle = document.querySelector('.subtitle');
+                if (subtitle) {
+                    if (minProb === 0) {
+                        subtitle.textContent = 'Sharp angles. No fluff. Pure edge. | Showing ALL props';
+                    } else {
+                        subtitle.textContent = `Sharp angles. No fluff. Pure edge. | Showing ${minProb}%+ probability props only`;
+                    }
+                }
+                
+                // Refresh data with new filter
+                if (typeof refreshData === 'function') {
+                    refreshData();
+                }
+            } catch (e) {
+                console.error('Error in setMinProbability:', e);
             }
-            
-            // Refresh data with new filter
-            refreshData();
         }
 
         function toggleAutoRefresh() {
@@ -2205,48 +2222,76 @@
 
         // Initial load timestamp
         document.addEventListener('DOMContentLoaded', function() {
-            const now = new Date().toLocaleString();
-            document.getElementById('lastUpdate').textContent = `Last updated: ${now}`;
-            loadDailyUpdateStatus();
-            
-            // Check loading status immediately if no players loaded
-            checkLoadingStatus();
-            
-            // Refresh status every minute
-            setInterval(loadDailyUpdateStatus, 60000);
-            // Track player count to detect when new players are loaded
-            let lastPlayerCount = {{ projections|length }};
-            
-            // Auto-refresh edges every 15 seconds to catch background updates faster
-            // This ensures newly loaded players appear quickly
-            setInterval(() => {
-                if (typeof refreshData === 'function') {
-                    refreshData().then((data) => {
-                        // Check if player count increased (new players loaded)
-                        const currentCount = data?.total_players_loaded || data?.projections_count || parseInt(document.getElementById('totalPlayers')?.textContent || '0');
-                        if (currentCount > lastPlayerCount && lastPlayerCount >= 0) {
-                            const newPlayers = currentCount - lastPlayerCount;
-                            console.log(`New players detected! Count increased from ${lastPlayerCount} to ${currentCount}`);
-                            lastPlayerCount = currentCount;
-                            // Show a notification
-                            const notification = document.createElement('div');
-                            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 15px 20px; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px;';
-                            notification.textContent = `${newPlayers} new player${newPlayers > 1 ? 's' : ''} loaded!`;
-                            document.body.appendChild(notification);
-                            setTimeout(() => notification.remove(), 5000);
-                        } else if (currentCount !== lastPlayerCount) {
-                            lastPlayerCount = currentCount;
+            try {
+                const now = new Date().toLocaleString();
+                const lastUpdateEl = document.getElementById('lastUpdate');
+                if (lastUpdateEl) lastUpdateEl.textContent = `Last updated: ${now}`;
+                
+                // Load daily status (wrapped in try-catch)
+                try {
+                    if (typeof loadDailyUpdateStatus === 'function') loadDailyUpdateStatus();
+                } catch (e) { console.error('Error loading daily status:', e); }
+                
+                // Check loading status immediately if no players loaded
+                try {
+                    if (typeof checkLoadingStatus === 'function') checkLoadingStatus();
+                } catch (e) { console.error('Error checking loading status:', e); }
+                
+                // Refresh status every minute
+                setInterval(() => {
+                    try {
+                        if (typeof loadDailyUpdateStatus === 'function') loadDailyUpdateStatus();
+                    } catch (e) { console.error('Error in status interval:', e); }
+                }, 60000);
+                
+                // Track player count to detect when new players are loaded
+                let lastPlayerCount = {{ projections|length if projections else 0 }};
+                
+                // Auto-refresh edges every 15 seconds to catch background updates faster
+                // This ensures newly loaded players appear quickly
+                setInterval(() => {
+                    try {
+                        if (typeof refreshData === 'function') {
+                            refreshData().then((data) => {
+                                // Check if player count increased (new players loaded)
+                                const currentCount = data?.total_players_loaded || data?.projections_count || parseInt(document.getElementById('totalPlayers')?.textContent || '0');
+                                if (currentCount > lastPlayerCount && lastPlayerCount >= 0) {
+                                    const newPlayers = currentCount - lastPlayerCount;
+                                    console.log(`New players detected! Count increased from ${lastPlayerCount} to ${currentCount}`);
+                                    lastPlayerCount = currentCount;
+                                    // Show a notification
+                                    const notification = document.createElement('div');
+                                    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 15px 20px; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px;';
+                                    notification.textContent = `${newPlayers} new player${newPlayers > 1 ? 's' : ''} loaded!`;
+                                    document.body.appendChild(notification);
+                                    setTimeout(() => notification.remove(), 5000);
+                                } else if (currentCount !== lastPlayerCount) {
+                                    lastPlayerCount = currentCount;
+                                }
+                            }).catch(err => {
+                                console.error('Error refreshing:', err);
+                            });
                         }
-                    }).catch(err => {
-                        console.error('Error refreshing:', err);
-                    });
-                }
-            }, 15000); // Reduced to 15 seconds for faster updates
-            // Load glitched props scan status
-            loadGlitchedProps();
-            loadGlitchedScanStatus();
-            // Refresh scan status every 5 minutes
-            setInterval(loadGlitchedScanStatus, 300000);
+                    } catch (e) { console.error('Error in refresh interval:', e); }
+                }, 15000); // Reduced to 15 seconds for faster updates
+                
+                // Load glitched props scan status (wrapped in try-catch)
+                try {
+                    if (typeof loadGlitchedProps === 'function') loadGlitchedProps();
+                    if (typeof loadGlitchedScanStatus === 'function') loadGlitchedScanStatus();
+                } catch (e) { console.error('Error loading glitched props:', e); }
+                
+                // Refresh scan status every 5 minutes
+                setInterval(() => {
+                    try {
+                        if (typeof loadGlitchedScanStatus === 'function') loadGlitchedScanStatus();
+                    } catch (e) { console.error('Error in scan status interval:', e); }
+                }, 300000);
+                
+                console.log('Page initialized successfully');
+            } catch (e) {
+                console.error('Error during page initialization:', e);
+            }
         });
 
         // Glitched Props Functions

@@ -862,7 +862,8 @@ def api_edges():
     Supports filtering and sorting via query parameters.
     """
     global MARKET_PROJECTIONS
-    MARKET_PROJECTIONS = load_projections()  # Reload in case it changed
+    # Use get_market_projections to preserve in-memory data when file is empty (ephemeral filesystem)
+    MARKET_PROJECTIONS = get_market_projections(force_reload=True)
     
     # Get selected stat type
     stat_type = request.args.get('stat_type', 'PTS')
@@ -1051,7 +1052,8 @@ def api_update_projections():
 def api_line_changes():
     """Get line changes since last update."""
     global MARKET_PROJECTIONS
-    MARKET_PROJECTIONS = load_projections()
+    # Use get_market_projections to preserve in-memory data when file is empty (ephemeral filesystem)
+    MARKET_PROJECTIONS = get_market_projections(force_reload=True)
     changes = track_line_changes(MARKET_PROJECTIONS)
     return jsonify({
         'changes': changes,
