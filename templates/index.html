@@ -371,36 +371,6 @@
             {% endif %}
         </div>
 
-        <!-- Parlay Recommendations Section -->
-        <div id="parlaySection" class="parlay-section" style="display: none;">
-            <h2>🎲 PARLAY RECOMMENDATIONS</h2>
-            <p class="section-subtitle">Best parlay combinations based on 70%+ probability props</p>
-            
-            <div class="parlay-tabs">
-                <button class="parlay-tab active" onclick="showParlayTab('2-man')">2-Man</button>
-                <button class="parlay-tab" onclick="showParlayTab('3-man')">3-Man</button>
-                <button class="parlay-tab" onclick="showParlayTab('4-man')">4-Man</button>
-                <button class="parlay-tab" onclick="showParlayTab('6-man')">6-Man</button>
-            </div>
-            
-            <div id="parlay-2-man" class="parlay-tab-content active">
-                <h3>2-Man Parlays</h3>
-                <div id="parlay2ManContainer" class="parlay-container"></div>
-            </div>
-            <div id="parlay-3-man" class="parlay-tab-content">
-                <h3>3-Man Parlays</h3>
-                <div id="parlay3ManContainer" class="parlay-container"></div>
-            </div>
-            <div id="parlay-4-man" class="parlay-tab-content">
-                <h3>4-Man Parlays</h3>
-                <div id="parlay4ManContainer" class="parlay-container"></div>
-            </div>
-            <div id="parlay-6-man" class="parlay-tab-content">
-                <h3>6-Man Parlays</h3>
-                <div id="parlay6ManContainer" class="parlay-container"></div>
-            </div>
-        </div>
-
         <!-- Parlay Calculator Modal -->
         <div id="parlayCalculatorModal" class="parlay-modal" style="display: none;">
             <div class="parlay-modal-content">
@@ -409,12 +379,67 @@
                     <button onclick="hideParlayCalculator()" class="close-btn">✕</button>
                 </div>
                 <div class="parlay-calculator-body">
-                    <div class="calculator-inputs">
-                        <h3>Add Bets</h3>
+                    <!-- Parlay Size Tabs -->
+                    <div class="parlay-tabs">
+                        <button class="parlay-tab active" onclick="showParlayTab('2-man')">2-Man</button>
+                        <button class="parlay-tab" onclick="showParlayTab('3-man')">3-Man</button>
+                        <button class="parlay-tab" onclick="showParlayTab('4-man')">4-Man</button>
+                        <button class="parlay-tab" onclick="showParlayTab('5-man')">5-Man</button>
+                        <button class="parlay-tab" onclick="showParlayTab('6-man')">6-Man</button>
+                    </div>
+                    
+                    <!-- 2-Man Parlays -->
+                    <div id="parlay-2-man" class="parlay-tab-content active">
+                        <h3>2-Man Parlays</h3>
+                        <p class="parlay-desc">Best 2-leg combinations from high-probability props</p>
+                        <div id="parlay2ManContainer" class="parlay-container">
+                            <div class="loading-parlays">Loading recommendations...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3-Man Parlays -->
+                    <div id="parlay-3-man" class="parlay-tab-content">
+                        <h3>3-Man Parlays</h3>
+                        <p class="parlay-desc">Best 3-leg combinations for higher payouts</p>
+                        <div id="parlay3ManContainer" class="parlay-container">
+                            <div class="loading-parlays">Loading recommendations...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 4-Man Parlays -->
+                    <div id="parlay-4-man" class="parlay-tab-content">
+                        <h3>4-Man Parlays</h3>
+                        <p class="parlay-desc">Best 4-leg combinations for big payouts</p>
+                        <div id="parlay4ManContainer" class="parlay-container">
+                            <div class="loading-parlays">Loading recommendations...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 5-Man Parlays -->
+                    <div id="parlay-5-man" class="parlay-tab-content">
+                        <h3>5-Man Parlays</h3>
+                        <p class="parlay-desc">Best 5-leg combinations for massive payouts</p>
+                        <div id="parlay5ManContainer" class="parlay-container">
+                            <div class="loading-parlays">Loading recommendations...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 6-Man Parlays -->
+                    <div id="parlay-6-man" class="parlay-tab-content">
+                        <h3>6-Man Parlays</h3>
+                        <p class="parlay-desc">Best 6-leg combinations for lottery-style payouts</p>
+                        <div id="parlay6ManContainer" class="parlay-container">
+                            <div class="loading-parlays">Loading recommendations...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Manual Calculator -->
+                    <div class="manual-calculator">
+                        <h3>Custom Parlay Builder</h3>
                         <div id="betsList"></div>
-                        <button onclick="addBetRow()" class="add-bet-btn">+ Add Bet</button>
+                        <button onclick="addBetRow()" class="add-bet-btn">+ Add Leg</button>
+                        <button onclick="calculateCustomParlay()" class="calc-btn">Calculate</button>
                         <div class="calculator-results">
-                            <h3>Parlay Results</h3>
                             <div id="calculatorResults"></div>
                         </div>
                     </div>
@@ -468,57 +493,6 @@
                     </div>
                 </div>
             {% endif %}
-        </div>
-
-        <!-- Parlay Recommendations Section -->
-        <div id="parlaySection" class="parlay-section" style="display: none;">
-            <h2>🎲 PARLAY RECOMMENDATIONS</h2>
-            <p class="section-subtitle">Best parlay combinations based on 70%+ probability props</p>
-            
-            <div class="parlay-tabs">
-                <button class="parlay-tab active" onclick="showParlayTab('2-man')">2-Man</button>
-                <button class="parlay-tab" onclick="showParlayTab('3-man')">3-Man</button>
-                <button class="parlay-tab" onclick="showParlayTab('4-man')">4-Man</button>
-                <button class="parlay-tab" onclick="showParlayTab('6-man')">6-Man</button>
-            </div>
-            
-            <div id="parlay-2-man" class="parlay-tab-content active">
-                <h3>2-Man Parlays</h3>
-                <div id="parlay2ManContainer" class="parlay-container"></div>
-            </div>
-            <div id="parlay-3-man" class="parlay-tab-content">
-                <h3>3-Man Parlays</h3>
-                <div id="parlay3ManContainer" class="parlay-container"></div>
-            </div>
-            <div id="parlay-4-man" class="parlay-tab-content">
-                <h3>4-Man Parlays</h3>
-                <div id="parlay4ManContainer" class="parlay-container"></div>
-            </div>
-            <div id="parlay-6-man" class="parlay-tab-content">
-                <h3>6-Man Parlays</h3>
-                <div id="parlay6ManContainer" class="parlay-container"></div>
-            </div>
-        </div>
-
-        <!-- Parlay Calculator Modal -->
-        <div id="parlayCalculatorModal" class="parlay-modal" style="display: none;">
-            <div class="parlay-modal-content">
-                <div class="parlay-modal-header">
-                    <h2>🎲 Parlay Calculator</h2>
-                    <button onclick="hideParlayCalculator()" class="close-btn">✕</button>
-                </div>
-                <div class="parlay-calculator-body">
-                    <div class="calculator-inputs">
-                        <h3>Add Bets</h3>
-                        <div id="betsList"></div>
-                        <button onclick="addBetRow()" class="add-bet-btn">+ Add Bet</button>
-                        <div class="calculator-results">
-                            <h3>Parlay Results</h3>
-                            <div id="calculatorResults"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div id="streaksContainer">
@@ -682,15 +656,29 @@
                         <tr>
                             <th>Player</th>
                             <th>Line</th>
+                            <th>Pick</th>
+                            <th>Prob</th>
                         </tr>
                     </thead>
                     <tbody id="projectionsTableBody">
+                        {% for edge in edges %}
+                        <tr>
+                            <td>{{ edge.player }}</td>
+                            <td>{{ edge.line }}</td>
+                            <td class="pick-cell pick-{{ edge.recommendation|lower if edge.recommendation else 'over' }}">{{ edge.recommendation|default('OVER') }}</td>
+                            <td>{{ edge.probability|default(70)|round(0)|int }}%</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not edges %}
                         {% for player, line in projections.items() %}
                         <tr>
                             <td>{{ player }}</td>
                             <td>{{ line }}</td>
+                            <td class="pick-cell">-</td>
+                            <td>-</td>
                         </tr>
                         {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -1174,19 +1162,34 @@
                 highProbContainer.innerHTML = '';
             }
 
-            // Update projections table
+            // Update projections table with edges (includes over/under picks)
             const projectionsTable = document.getElementById('projectionsTable');
             const tbody = document.getElementById('projectionsTableBody');
             const projectionCount = document.getElementById('projectionCount');
             
-            tbody.innerHTML = Object.entries(data.projections).map(([player, line]) => `
-                <tr>
-                    <td>${player}</td>
-                    <td>${line}</td>
-                </tr>
-            `).join('');
-            
-            projectionCount.textContent = Object.keys(data.projections).length;
+            // Use edges data if available (has picks), otherwise fall back to projections
+            const edges = data.edges || [];
+            if (edges.length > 0) {
+                tbody.innerHTML = edges.map(edge => `
+                    <tr>
+                        <td>${edge.player || 'Unknown'}</td>
+                        <td>${edge.line || 0}</td>
+                        <td class="pick-cell pick-${(edge.recommendation || 'over').toLowerCase()}">${edge.recommendation || 'OVER'}</td>
+                        <td>${Math.round(edge.probability || 70)}%</td>
+                    </tr>
+                `).join('');
+                projectionCount.textContent = edges.length;
+            } else if (data.projections) {
+                tbody.innerHTML = Object.entries(data.projections).map(([player, line]) => `
+                    <tr>
+                        <td>${player}</td>
+                        <td>${line}</td>
+                        <td class="pick-cell">-</td>
+                        <td>-</td>
+                    </tr>
+                `).join('');
+                projectionCount.textContent = Object.keys(data.projections).length;
+            }
 
             // Update glitched props
             if (data.glitched_props) {
@@ -1770,9 +1773,234 @@
         }
 
         function hideTacticalFilters() {
-            document.getElementById('tacticalFiltersPanel').style.display = 'none';
+            const panel = document.getElementById('tacticalFiltersPanel');
+            if (panel) panel.style.display = 'none';
             // Apply filters when closing
             refreshData();
+        }
+
+        // ============================================
+        // PARLAY CALCULATOR FUNCTIONS
+        // ============================================
+        
+        function showParlayCalculator() {
+            try {
+                const modal = document.getElementById('parlayCalculatorModal');
+                if (!modal) {
+                    console.error('parlayCalculatorModal not found');
+                    alert('Parlay Calculator not available. Please refresh the page.');
+                    return;
+                }
+                modal.style.display = 'block';
+                // Load parlay recommendations from API
+                loadParlayRecommendations();
+            } catch (e) {
+                console.error('Error showing parlay calculator:', e);
+                alert('Error opening Parlay Calculator: ' + e.message);
+            }
+        }
+
+        function hideParlayCalculator() {
+            const modal = document.getElementById('parlayCalculatorModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function showParlayTab(tabId) {
+            try {
+                // Hide all tab contents
+                document.querySelectorAll('.parlay-tab-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.parlay-tab').forEach(t => t.classList.remove('active'));
+                // Show selected tab
+                const content = document.getElementById('parlay-' + tabId);
+                if (content) content.classList.add('active');
+                // Mark clicked tab as active
+                if (event && event.target) event.target.classList.add('active');
+            } catch (e) {
+                console.error('Error switching parlay tab:', e);
+            }
+        }
+
+        function checkParlayRecommendations(data) {
+            try {
+                // Populate parlay containers with recommendations from API data
+                if (data && data.parlay_recommendations) {
+                    renderParlayRecommendations(data.parlay_recommendations);
+                }
+            } catch (e) {
+                console.error('Error checking parlay recommendations:', e);
+            }
+        }
+
+        function renderParlayRecommendations(recommendations) {
+            try {
+                // Render 2-man parlays
+                const container2 = document.getElementById('parlay2ManContainer');
+                if (container2) {
+                    container2.innerHTML = recommendations['2_man'] ? renderParlayList(recommendations['2_man'], 2) : '<div class="no-parlays">No 2-man parlays available</div>';
+                }
+                
+                // Render 3-man parlays
+                const container3 = document.getElementById('parlay3ManContainer');
+                if (container3) {
+                    container3.innerHTML = recommendations['3_man'] ? renderParlayList(recommendations['3_man'], 3) : '<div class="no-parlays">No 3-man parlays available</div>';
+                }
+                
+                // Render 4-man parlays
+                const container4 = document.getElementById('parlay4ManContainer');
+                if (container4) {
+                    container4.innerHTML = recommendations['4_man'] ? renderParlayList(recommendations['4_man'], 4) : '<div class="no-parlays">No 4-man parlays available</div>';
+                }
+                
+                // Render 5-man parlays
+                const container5 = document.getElementById('parlay5ManContainer');
+                if (container5) {
+                    container5.innerHTML = recommendations['5_man'] ? renderParlayList(recommendations['5_man'], 5) : '<div class="no-parlays">No 5-man parlays available</div>';
+                }
+                
+                // Render 6-man parlays
+                const container6 = document.getElementById('parlay6ManContainer');
+                if (container6) {
+                    container6.innerHTML = recommendations['6_man'] ? renderParlayList(recommendations['6_man'], 6) : '<div class="no-parlays">No 6-man parlays available</div>';
+                }
+            } catch (e) {
+                console.error('Error rendering parlay recommendations:', e);
+            }
+        }
+        
+        // Custom parlay builder
+        let customBets = [];
+        
+        function addBetRow() {
+            const betsList = document.getElementById('betsList');
+            if (!betsList) return;
+            
+            const rowId = Date.now();
+            const row = document.createElement('div');
+            row.className = 'bet-row';
+            row.id = `bet-${rowId}`;
+            row.innerHTML = `
+                <input type="text" placeholder="Player name" class="bet-player" />
+                <select class="bet-pick">
+                    <option value="OVER">OVER</option>
+                    <option value="UNDER">UNDER</option>
+                </select>
+                <input type="number" placeholder="Line" class="bet-line" step="0.5" />
+                <input type="number" placeholder="Prob %" class="bet-prob" value="70" />
+                <button onclick="removeBetRow('${rowId}')" class="remove-bet">✕</button>
+            `;
+            betsList.appendChild(row);
+        }
+        
+        function removeBetRow(rowId) {
+            const row = document.getElementById(`bet-${rowId}`);
+            if (row) row.remove();
+        }
+        
+        function calculateCustomParlay() {
+            const betsList = document.getElementById('betsList');
+            const resultsDiv = document.getElementById('calculatorResults');
+            if (!betsList || !resultsDiv) return;
+            
+            const rows = betsList.querySelectorAll('.bet-row');
+            if (rows.length < 2) {
+                resultsDiv.innerHTML = '<div class="calc-error">Need at least 2 legs for a parlay</div>';
+                return;
+            }
+            
+            let bets = [];
+            let combinedProb = 1;
+            let combinedOdds = 1;
+            
+            rows.forEach(row => {
+                const player = row.querySelector('.bet-player')?.value || 'Unknown';
+                const pick = row.querySelector('.bet-pick')?.value || 'OVER';
+                const line = parseFloat(row.querySelector('.bet-line')?.value) || 0;
+                const prob = parseFloat(row.querySelector('.bet-prob')?.value) || 70;
+                
+                bets.push({ player, pick, line, prob });
+                combinedProb *= (prob / 100);
+                
+                // Assume -110 odds for each leg
+                const decimalOdds = 1.909; // -110 in decimal
+                combinedOdds *= decimalOdds;
+            });
+            
+            const americanOdds = combinedOdds >= 2 ? Math.round((combinedOdds - 1) * 100) : Math.round(-100 / (combinedOdds - 1));
+            const payout = (combinedOdds - 1) * 100;
+            const ev = (combinedProb * payout) - 100;
+            
+            resultsDiv.innerHTML = `
+                <div class="calc-result">
+                    <div class="result-row">
+                        <span class="result-label">Legs:</span>
+                        <span class="result-value">${bets.length}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Combined Probability:</span>
+                        <span class="result-value">${(combinedProb * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Parlay Odds:</span>
+                        <span class="result-value">${americanOdds > 0 ? '+' : ''}${americanOdds}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">$100 Wins:</span>
+                        <span class="result-value">$${payout.toFixed(2)}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Expected Value:</span>
+                        <span class="result-value ${ev >= 0 ? 'positive' : 'negative'}">${ev >= 0 ? '+' : ''}$${ev.toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="calc-legs">
+                    <h4>Your Legs:</h4>
+                    ${bets.map(b => `<div class="leg-item">${b.player} ${b.pick} ${b.line} (${b.prob}%)</div>`).join('')}
+                </div>
+            `;
+        }
+
+        function renderParlayList(parlays, legCount) {
+            if (!parlays || parlays.length === 0) {
+                return `<div class="no-parlays">No ${legCount}-man parlays available. Need more high-probability props.</div>`;
+            }
+            
+            return parlays.map((parlay, idx) => `
+                <div class="parlay-card">
+                    <div class="parlay-header">
+                        <span class="parlay-rank">#${idx + 1}</span>
+                        <span class="parlay-odds">${parlay.payout?.american_odds > 0 ? '+' : ''}${parlay.payout?.american_odds || 'N/A'}</span>
+                        <span class="parlay-prob">${parlay.total_probability?.toFixed(1) || 0}%</span>
+                    </div>
+                    <div class="parlay-legs">
+                        ${parlay.bets?.map(bet => `
+                            <div class="parlay-leg">
+                                <span class="leg-player">${bet.player || 'Unknown'}</span>
+                                <span class="leg-pick ${(bet.recommendation || '').toLowerCase()}">${bet.recommendation || 'OVER'} ${bet.line || 0}</span>
+                                <span class="leg-prob">${bet.probability || 0}%</span>
+                            </div>
+                        `).join('') || ''}
+                    </div>
+                    <div class="parlay-footer">
+                        <span class="parlay-payout">$100 wins $${parlay.payout?.profit_per_100?.toFixed(2) || '0.00'}</span>
+                        <span class="parlay-ev ${(parlay.expected_value || 0) >= 0 ? 'positive' : 'negative'}">EV: ${(parlay.expected_value || 0) >= 0 ? '+' : ''}$${parlay.expected_value?.toFixed(2) || '0.00'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadParlayRecommendations() {
+            try {
+                const response = await fetch('/api/parlay-calculator');
+                const data = await response.json();
+                
+                if (data.success && data.recommendations) {
+                    renderParlayRecommendations(data.recommendations);
+                } else {
+                    console.error('Failed to load parlay recommendations:', data.error);
+                }
+            } catch (e) {
+                console.error('Error loading parlay recommendations:', e);
+            }
         }
 
         function applyFilters() {

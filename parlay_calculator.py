@@ -77,7 +77,7 @@ def find_best_parlays(edges: List[Dict], parlay_size: int, max_recommendations: 
     
     Args:
         edges: List of edge dictionaries with 'probability' and 'player' keys
-        parlay_size: Size of parlay (2, 3, 4, or 6)
+        parlay_size: Size of parlay (2, 3, 4, 5, or 6)
         max_recommendations: Maximum number of recommendations to return
     
     Returns:
@@ -86,8 +86,8 @@ def find_best_parlays(edges: List[Dict], parlay_size: int, max_recommendations: 
     if len(edges) < parlay_size:
         return []
     
-    # Filter to only high-probability edges (70%+)
-    high_prob_edges = [e for e in edges if e.get('probability', 0) >= 70.0]
+    # Filter to only high-probability edges (60%+ for more options)
+    high_prob_edges = [e for e in edges if e.get('probability', 0) >= 60.0]
     
     if len(high_prob_edges) < parlay_size:
         return []
@@ -145,7 +145,7 @@ def find_best_parlays(edges: List[Dict], parlay_size: int, max_recommendations: 
 
 def recommend_parlays(edges: List[Dict]) -> Dict:
     """
-    Generate parlay recommendations for 2-man, 3-man, 4-man, and 6-man parlays.
+    Generate parlay recommendations for 2-man, 3-man, 4-man, 5-man, and 6-man parlays.
     
     Args:
         edges: List of edge dictionaries
@@ -157,6 +157,7 @@ def recommend_parlays(edges: List[Dict]) -> Dict:
         '2_man': [],
         '3_man': [],
         '4_man': [],
+        '5_man': [],
         '6_man': []
     }
     
@@ -164,6 +165,7 @@ def recommend_parlays(edges: List[Dict]) -> Dict:
     recommendations['2_man'] = find_best_parlays(edges, 2, max_recommendations=5)
     recommendations['3_man'] = find_best_parlays(edges, 3, max_recommendations=5)
     recommendations['4_man'] = find_best_parlays(edges, 4, max_recommendations=5)
+    recommendations['5_man'] = find_best_parlays(edges, 5, max_recommendations=5)
     recommendations['6_man'] = find_best_parlays(edges, 6, max_recommendations=3)
     
     return recommendations

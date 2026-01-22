@@ -73,7 +73,7 @@ except ImportError as e:
         pass
 
 try:
-    from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display
+    from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display, find_best_parlays
 except ImportError as e:
     print(f"WARNING: Failed to import parlay_calculator: {e}", file=sys.stderr)
     def recommend_parlays(*args, **kwargs):
@@ -1027,7 +1027,6 @@ def api_projections():
         return jsonify({
             'count': len(MARKET_PROJECTIONS),
             'is_default_only': is_default_only,
-            'default_players': default_players,
             'current_players': current_players[:10],  # First 10 for preview
             'loading_in_progress': getattr(app, '_loading_players', False)
         }), 200
@@ -1243,28 +1242,60 @@ def api_trigger_update():
             'error': str(e)
         }), 500
 
-@app.route('/api/parlay-calculator', methods=['POST'])
+@app.route('/api/parlay-calculator', methods=['GET', 'POST'])
 @requires_auth
 def api_parlay_calculator():
-    """Calculate parlay payout for custom bets."""
+    """Calculate parlay payout for custom bets or get recommendations."""
     try:
-        data = request.get_json()
-        bets = data.get('bets', [])
-        odds_format = data.get('odds_format', 'american')
-        
-        if not bets or len(bets) < 2:
+        if request.method == 'GET':
+            # Return parlay recommendations based on current edges
+            global MARKET_PROJECTIONS
+            MARKET_PROJECTIONS = get_market_projections(force_reload=True)
+            
+            edges, high_prob_props, streaks, factors, _ = get_edges_data(
+                MARKET_PROJECTIONS,
+                stat_type='PTS',
+                max_players=8
+            )
+            
+            # Filter to high probability edges for parlays
+            parlay_edges = [e for e in edges if e.get('probability', 0) >= 65]
+            
+            recommendations = {
+                '2_man': find_best_parlays(parlay_edges, 2, max_recommendations=5),
+                '3_man': find_best_parlays(parlay_edges, 3, max_recommendations=5),
+                '4_man': find_best_parlays(parlay_edges, 4, max_recommendations=5),
+                '5_man': find_best_parlays(parlay_edges, 5, max_recommendations=5),
+                '6_man': find_best_parlays(parlay_edges, 6, max_recommendations=3)
+            }
+            
             return jsonify({
-                'success': False,
-                'error': 'Parlay requires at least 2 bets'
-            }), 400
+                'success': True,
+                'recommendations': recommendations,
+                'available_edges': len(parlay_edges)
+            })
         
-        payout_info = calculate_parlay_payout(bets, odds_format)
-        
-        return jsonify({
-            'success': True,
-            'payout': payout_info
-        })
+        else:  # POST - custom parlay calculation
+            data = request.get_json()
+            bets = data.get('bets', [])
+            odds_format = data.get('odds_format', 'american')
+            
+            if not bets or len(bets) < 2:
+                return jsonify({
+                    'success': False,
+                    'error': 'Parlay requires at least 2 bets'
+                }), 400
+            
+            payout_info = calculate_parlay_payout(bets, odds_format)
+            
+            return jsonify({
+                'success': True,
+                'payout': payout_info
+            })
     except Exception as e:
+        import traceback
+        print(f"ERROR in parlay calculator: {e}", file=sys.stderr)
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)

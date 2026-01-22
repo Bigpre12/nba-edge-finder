@@ -885,6 +885,337 @@ header h1 {
     background: rgba(255, 215, 0, 0.1);
 }
 
+/* Projections Table Pick Cells */
+.pick-cell {
+    font-weight: 700;
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.pick-cell.pick-over {
+    color: #27ae60;
+    background: rgba(39, 174, 96, 0.15);
+}
+
+.pick-cell.pick-under {
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.15);
+}
+
+/* Parlay Calculator Styles */
+.parlay-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.parlay-modal-content {
+    background: #1a1a1a;
+    border-radius: 12px;
+    max-width: 900px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.parlay-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+.parlay-modal-header h2 {
+    margin: 0;
+    color: #ffd700;
+}
+
+.parlay-calculator-body {
+    padding: 20px;
+}
+
+.parlay-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.parlay-tab {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    color: #888;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.parlay-tab:hover {
+    background: rgba(255, 215, 0, 0.1);
+    color: #fff;
+}
+
+.parlay-tab.active {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    color: #000;
+    border-color: #ffd700;
+}
+
+.parlay-tab-content {
+    display: none;
+}
+
+.parlay-tab-content.active {
+    display: block;
+}
+
+.parlay-desc {
+    color: #888;
+    font-size: 0.85em;
+    margin-bottom: 16px;
+}
+
+.parlay-container {
+    display: grid;
+    gap: 12px;
+}
+
+.parlay-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.parlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.parlay-rank {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    color: #000;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.parlay-odds {
+    color: #ffd700;
+    font-weight: 700;
+    font-size: 1.1em;
+}
+
+.parlay-prob {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.parlay-legs {
+    margin-bottom: 10px;
+}
+
+.parlay-leg {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.leg-player {
+    color: #fff;
+}
+
+.leg-pick {
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.leg-pick.over {
+    color: #27ae60;
+    background: rgba(39, 174, 96, 0.15);
+}
+
+.leg-pick.under {
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.15);
+}
+
+.leg-prob {
+    color: #888;
+}
+
+.parlay-footer {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.parlay-payout {
+    color: #ffd700;
+    font-weight: 600;
+}
+
+.parlay-ev.positive {
+    color: #27ae60;
+}
+
+.parlay-ev.negative {
+    color: #e74c3c;
+}
+
+.no-parlays {
+    text-align: center;
+    color: #666;
+    padding: 30px;
+    font-style: italic;
+}
+
+.loading-parlays {
+    text-align: center;
+    color: #888;
+    padding: 30px;
+}
+
+/* Manual Calculator */
+.manual-calculator {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.manual-calculator h3 {
+    color: #ffd700;
+    margin-bottom: 15px;
+}
+
+.bet-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.bet-row input, .bet-row select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.bet-player {
+    flex: 2;
+}
+
+.bet-pick {
+    width: 100px;
+}
+
+.bet-line, .bet-prob {
+    width: 80px;
+}
+
+.remove-bet {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.add-bet-btn, .calc-btn {
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    color: #ffd700;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
+    margin-top: 10px;
+}
+
+.calc-btn {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    color: #000;
+    font-weight: 700;
+}
+
+.calculator-results {
+    margin-top: 20px;
+}
+
+.calc-result {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+}
+
+.result-label {
+    color: #888;
+}
+
+.result-value {
+    color: #fff;
+    font-weight: 600;
+}
+
+.result-value.positive {
+    color: #27ae60;
+}
+
+.result-value.negative {
+    color: #e74c3c;
+}
+
+.calc-legs {
+    margin-top: 15px;
+}
+
+.calc-legs h4 {
+    color: #ffd700;
+    margin-bottom: 10px;
+}
+
+.leg-item {
+    padding: 6px 0;
+    color: #ccc;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.calc-error {
+    color: #e74c3c;
+    text-align: center;
+    padding: 20px;
+}
+
 .load-progress {
     margin: 20px 0;
     padding: 20px;
