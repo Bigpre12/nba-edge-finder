@@ -774,6 +774,110 @@ def api_parlay_calculator():
             'error': str(e)
         }), 500
 
+@app.route('/api/glitched-props', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@requires_auth
+def api_glitched_props():
+    """API endpoint for glitched props management."""
+    if request.method == 'GET':
+        return jsonify({
+            'success': True,
+            'props': get_glitched_props()
+        })
+    
+    elif request.method == 'POST':
+        # Add new glitched prop
+        try:
+            data = request.get_json()
+            prop = data.get('prop', '').strip()
+            reasoning = data.get('reasoning', '').strip()
+            rating = int(data.get('rating', 5))
+            platform = data.get('platform', '').strip()
+            
+            if not prop or not reasoning or not platform:
+                return jsonify({
+                    'success': False,
+                    'error': 'Prop, reasoning, and platform are required'
+                }), 400
+            
+            if rating < 1 or rating > 10:
+                return jsonify({
+                    'success': False,
+                    'error': 'Rating must be between 1 and 10'
+                }), 400
+            
+            if add_glitched_prop(prop, reasoning, rating, platform):
+                return jsonify({
+                    'success': True,
+                    'message': 'Glitched prop added successfully',
+                    'props': get_glitched_props()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to save glitched prop'
+                }), 500
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    elif request.method == 'PUT':
+        # Update glitched prop
+        try:
+            data = request.get_json()
+            prop_id = int(data.get('id'))
+            prop = data.get('prop')
+            reasoning = data.get('reasoning')
+            rating = data.get('rating')
+            platform = data.get('platform')
+            
+            if rating is not None and (rating < 1 or rating > 10):
+                return jsonify({
+                    'success': False,
+                    'error': 'Rating must be between 1 and 10'
+                }), 400
+            
+            if update_glitched_prop(prop_id, prop, reasoning, rating, platform):
+                return jsonify({
+                    'success': True,
+                    'message': 'Glitched prop updated successfully',
+                    'props': get_glitched_props()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to update glitched prop'
+                }), 500
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    elif request.method == 'DELETE':
+        # Remove glitched prop
+        try:
+            data = request.get_json()
+            prop_id = int(data.get('id'))
+            
+            if remove_glitched_prop(prop_id):
+                return jsonify({
+                    'success': True,
+                    'message': 'Glitched prop removed successfully',
+                    'props': get_glitched_props()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to remove glitched prop'
+                }), 500
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
 if __name__ == '__main__':
     # Development mode
     try:
