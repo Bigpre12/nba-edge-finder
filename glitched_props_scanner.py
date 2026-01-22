@@ -7,7 +7,15 @@ import os
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-import requests
+
+# Try to import requests, but don't fail if not available
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    print("Warning: requests library not available. Some features may be limited.")
+
 from glitched_props import add_glitched_prop, get_glitched_props
 
 # Configuration
