@@ -778,9 +778,9 @@
                                     <div class="edge-card ${recommendation.toLowerCase()}">
                                         <div class="player-name">${playerName}</div>
                                         <div class="edge-details">
-                                            <div class="stat-row"><span class="label">Line:</span><span class="value">${edge.line}</span></div>
-                                            <div class="stat-row"><span class="label">L5 Avg:</span><span class="value">${edge.average}</span></div>
-                                            <div class="recommendation"><strong>${edge.recommendation}</strong></div>
+                                            <div class="stat-row"><span class="label">Line:</span><span class="value">${edge.line || 'N/A'}</span></div>
+                                            <div class="stat-row"><span class="label">L5 Avg:</span><span class="value">${edge.average || 'N/A'}</span></div>
+                                            <div class="recommendation"><strong>${recommendation}</strong></div>
                                         </div>
                                         ${streakBadge}
                                     </div>
@@ -1348,11 +1348,22 @@
 
         // Line Management Functions
         function showLineManagement() {
-            document.getElementById('lineManagementPanel').style.display = 'block';
-            loadLineChanges();
-            loadChaseList();
-            loadAltLines();
-            loadDailyUpdateStatus();
+            try {
+                const panel = document.getElementById('lineManagementPanel');
+                if (!panel) {
+                    console.error('lineManagementPanel element not found');
+                    alert('Line Management panel not found. Please refresh the page.');
+                    return;
+                }
+                panel.style.display = 'block';
+                if (typeof loadLineChanges === 'function') loadLineChanges();
+                if (typeof loadChaseList === 'function') loadChaseList();
+                if (typeof loadAltLines === 'function') loadAltLines();
+                if (typeof loadDailyUpdateStatus === 'function') loadDailyUpdateStatus();
+            } catch (error) {
+                console.error('Error showing line management:', error);
+                alert('Error opening Line Management: ' + error.message);
+            }
         }
 
         function hideLineManagement() {
