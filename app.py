@@ -151,10 +151,10 @@ if len(MARKET_PROJECTIONS) == 0:
                         except:
                             is_nan = False
                         if not is_nan:
-                        new_projections[player_name] = round(avg, 1)
-                        loaded_count += 1
-                        if loaded_count % 10 == 0:
-                            print(f"   ✅ Loaded {loaded_count}/{len(players_to_load)} players...")
+                            new_projections[player_name] = round(avg, 1)
+                            loaded_count += 1
+                            if loaded_count % 10 == 0:
+                                print(f"   ✅ Loaded {loaded_count}/{len(players_to_load)} players...")
                     
                     # Rate limiting
                     if i % 10 == 0:
