@@ -612,17 +612,24 @@
                     <thead>
                         <tr>
                             <th>Prop</th>
+                            <th>Source</th>
                             <th>Reasoning</th>
                             <th>Rating</th>
                             <th>Platform</th>
                             <th>Updated</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="glitchedPropsTableBody">
                         {% for prop in glitched_props %}
-                        <tr data-id="{{ prop.id }}">
+                        <tr data-id="{{ prop.id }}" class="{% if prop.validation and prop.validation.staleness_level == 'stale' %}row-stale{% elif prop.validation and prop.validation.staleness_level == 'warning' %}row-warning{% endif %}">
                             <td>{{ prop.prop }}</td>
+                            <td>
+                                <span class="source-badge source-{{ prop.source|default('manual') }}">
+                                    {{ prop.source_detail|default('Manual') }}
+                                </span>
+                            </td>
                             <td>{{ prop.reasoning }}</td>
                             <td>
                                 <span class="rating-badge rating-{{ prop.rating }}">
@@ -630,7 +637,22 @@
                                 </span>
                             </td>
                             <td>{{ prop.platform }}</td>
-                            <td>{{ prop.updated_at }}</td>
+                            <td class="timestamp-cell" data-timestamp="{{ prop.updated_at }}">{{ prop.updated_at }}</td>
+                            <td>
+                                {% if prop.validation %}
+                                    {% if not prop.validation.is_valid %}
+                                        <span class="status-badge status-invalid" title="{{ prop.validation.warnings|join(', ') }}">⚠️ Invalid</span>
+                                    {% elif prop.validation.staleness_level == 'stale' %}
+                                        <span class="status-badge status-stale" title="Data is over 24 hours old">🔴 Stale</span>
+                                    {% elif prop.validation.staleness_level == 'warning' %}
+                                        <span class="status-badge status-warning" title="Data is over 6 hours old">🟡 Aging</span>
+                                    {% else %}
+                                        <span class="status-badge status-fresh">🟢 Fresh</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="status-badge status-unknown">❓ Unknown</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <button onclick="editGlitchedProp({{ prop.id }})" class="btn-edit">✏️</button>
                                 <button onclick="deleteGlitchedProp({{ prop.id }})" class="btn-delete">🗑️</button>
@@ -2070,6 +2092,61 @@
             }
         }
 
+        // Format relative time (e.g., "5m ago", "2h ago", "1d ago")
+        function formatRelativeTime(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const date = new Date(dateStr.replace(' ', 'T'));
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                
+                if (diffMins < 1) return 'Just now';
+                if (diffMins < 60) return `${diffMins}m ago`;
+                
+                const diffHours = Math.floor(diffMins / 60);
+                if (diffHours < 24) return `${diffHours}h ago`;
+                
+                const diffDays = Math.floor(diffHours / 24);
+                return `${diffDays}d ago`;
+            } catch (e) {
+                return dateStr;
+            }
+        }
+        
+        // Get status badge HTML based on validation
+        function getStatusBadge(validation) {
+            if (!validation) {
+                return '<span class="status-badge status-unknown">? Unknown</span>';
+            }
+            if (!validation.is_valid) {
+                const warnings = validation.warnings ? validation.warnings.join(', ') : 'Invalid data';
+                return `<span class="status-badge status-invalid" title="${warnings}">⚠️ Invalid</span>`;
+            }
+            if (validation.staleness_level === 'stale') {
+                return '<span class="status-badge status-stale" title="Data is over 24 hours old">🔴 Stale</span>';
+            }
+            if (validation.staleness_level === 'warning') {
+                return '<span class="status-badge status-warning" title="Data is over 6 hours old">🟡 Aging</span>';
+            }
+            return '<span class="status-badge status-fresh">🟢 Fresh</span>';
+        }
+        
+        // Get source badge HTML
+        function getSourceBadge(source, sourceDetail) {
+            const sourceName = sourceDetail || source || 'Manual';
+            const sourceClass = source || 'manual';
+            return `<span class="source-badge source-${sourceClass}">${sourceName}</span>`;
+        }
+        
+        // Get row class based on staleness
+        function getRowClass(validation) {
+            if (!validation) return '';
+            if (validation.staleness_level === 'stale') return 'row-stale';
+            if (validation.staleness_level === 'warning') return 'row-warning';
+            return '';
+        }
+
         async function loadGlitchedProps() {
             try {
                 const response = await fetch('/api/glitched-props');
@@ -2080,8 +2157,9 @@
                 
                 if (data.props && data.props.length > 0) {
                     tbody.innerHTML = data.props.map(prop => `
-                        <tr data-id="${prop.id}">
+                        <tr data-id="${prop.id}" class="${getRowClass(prop.validation)}">
                             <td>${prop.prop || 'N/A'}</td>
+                            <td>${getSourceBadge(prop.source, prop.source_detail)}</td>
                             <td>${prop.reasoning || 'N/A'}</td>
                             <td>
                                 <span class="rating-badge rating-${prop.rating}">
@@ -2089,15 +2167,16 @@
                                 </span>
                             </td>
                             <td>${prop.platform || 'N/A'}</td>
-                            <td>${prop.updated_at || prop.created_at || 'N/A'}</td>
+                            <td class="timestamp-cell" title="${prop.updated_at || prop.created_at || ''}">${formatRelativeTime(prop.updated_at || prop.created_at)}</td>
+                            <td>${getStatusBadge(prop.validation)}</td>
                             <td>
-                                <button onclick="editGlitchedProp(${prop.id})" class="btn-edit">Edit</button>
-                                <button onclick="deleteGlitchedProp(${prop.id})" class="btn-delete">Delete</button>
+                                <button onclick="editGlitchedProp(${prop.id})" class="btn-edit">✏️</button>
+                                <button onclick="deleteGlitchedProp(${prop.id})" class="btn-delete">🗑️</button>
                             </td>
                         </tr>
                     `).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #888;">No glitched props found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #888;">No glitched props found</td></tr>';
                 }
             } catch (error) {
                 console.error('Error loading glitched props:', error);
@@ -2109,22 +2188,69 @@
                 const response = await fetch('/api/glitched-props/status');
                 const data = await response.json();
                 const statusText = document.getElementById('scanStatusText');
+                const scanBtn = document.querySelector('.btn-scan-glitch');
+                const statusBar = document.getElementById('glitchedScanStatus');
                 
                 if (!statusText) return;
                 
                 if (data.last_scan) {
-                    const lastScan = new Date(data.last_scan);
+                    const lastScan = new Date(data.last_scan.replace(' ', 'T'));
                     const now = new Date();
                     const minsAgo = Math.floor((now - lastScan) / (1000 * 60));
+                    const hoursAgo = minsAgo / 60;
                     
-                    statusText.textContent = `🔄 Background scan: ${data.total_scanned} players scanned, ${data.glitches_found} glitches found | Last scan: ${minsAgo} min ago | Next scan in ~${data.scan_interval_minutes} min`;
-                    statusText.style.color = '#b0b0b0';
+                    // Update status bar based on staleness
+                    if (hoursAgo >= 1) {
+                        // Data is stale (over 1 hour)
+                        statusText.innerHTML = `⚠️ <strong>DATA STALE!</strong> Last scan: ${minsAgo} min ago | ${data.total_scanned} players, ${data.glitches_found} glitches | <strong>Click "Run Scan Now" to refresh</strong>`;
+                        statusText.style.color = '#e74c3c';
+                        if (statusBar) {
+                            statusBar.classList.add('status-bar-stale');
+                            statusBar.classList.remove('status-bar-warning', 'status-bar-fresh');
+                        }
+                        if (scanBtn) {
+                            scanBtn.classList.add('btn-pulse-warning');
+                            scanBtn.textContent = '⚠️ Refresh Stale Data!';
+                        }
+                    } else if (minsAgo >= 15) {
+                        // Data is aging (over 15 minutes)
+                        statusText.innerHTML = `🟡 Data aging: ${minsAgo} min since last scan | ${data.total_scanned} players, ${data.glitches_found} glitches | Next scan in ~${Math.max(0, data.scan_interval_minutes - (minsAgo % data.scan_interval_minutes))} min`;
+                        statusText.style.color = '#f39c12';
+                        if (statusBar) {
+                            statusBar.classList.add('status-bar-warning');
+                            statusBar.classList.remove('status-bar-stale', 'status-bar-fresh');
+                        }
+                        if (scanBtn) {
+                            scanBtn.classList.remove('btn-pulse-warning');
+                            scanBtn.textContent = '🔍 Run Scan Now';
+                        }
+                    } else {
+                        // Data is fresh
+                        statusText.innerHTML = `🟢 Fresh data: ${data.total_scanned} players scanned, ${data.glitches_found} glitches found | Last scan: ${minsAgo} min ago | Next auto-scan in ~${Math.max(0, data.scan_interval_minutes - minsAgo)} min`;
+                        statusText.style.color = '#27ae60';
+                        if (statusBar) {
+                            statusBar.classList.add('status-bar-fresh');
+                            statusBar.classList.remove('status-bar-stale', 'status-bar-warning');
+                        }
+                        if (scanBtn) {
+                            scanBtn.classList.remove('btn-pulse-warning');
+                            scanBtn.textContent = '🔍 Run Scan Now';
+                        }
+                    }
                 } else {
-                    statusText.textContent = '⏳ Background scanning starting... (runs every 5 minutes)';
+                    statusText.innerHTML = '⏳ Background scanning starting... (runs every 5 minutes)';
                     statusText.style.color = '#888';
+                    if (statusBar) {
+                        statusBar.classList.remove('status-bar-stale', 'status-bar-warning', 'status-bar-fresh');
+                    }
                 }
             } catch (error) {
                 console.error('Error loading scan status:', error);
+                const statusText = document.getElementById('scanStatusText');
+                if (statusText) {
+                    statusText.innerHTML = '❌ Error loading scan status';
+                    statusText.style.color = '#e74c3c';
+                }
             }
         }
     </script>
