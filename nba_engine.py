@@ -309,6 +309,10 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
                     return None
             elif error_type in ['KeyError', 'AttributeError', 'ValueError', 'IndexError']:
                 # These are data errors, not network errors - don't retry
+                # Suppress warnings for expected KeyErrors (like 'resultSet' for players with no career stats)
+                if error_type == 'KeyError' and 'resultSet' in str(e):
+                    # Expected for players with no career stats - return silently
+                    return None
                 print(f"   ⚠️ {error_type} fetching season average for {player_info}: {e}")
                 return None
             else:
@@ -351,7 +355,9 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
             return None
     except KeyError as e:
         player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
-        print(f"   ⚠️ KeyError fetching season average for {player_info}: {e}")
+        # Suppress warnings for expected KeyErrors (like 'resultSet' for players with no career stats)
+        if 'resultSet' not in str(e):
+            print(f"   ⚠️ KeyError fetching season average for {player_info}: {e}")
         return None
     except AttributeError as e:
         player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
