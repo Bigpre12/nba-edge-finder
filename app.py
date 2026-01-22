@@ -390,7 +390,8 @@ def index():
                              stat_categories=stat_categories,
                              individual_stats=individual_stats,
                              combination_stats=combination_stats,
-                             current_stat_type=stat_type)
+                             current_stat_type=stat_type,
+                             glitched_props=get_glitched_props())
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
@@ -467,7 +468,8 @@ def api_edges():
         'total_players_loaded': len(MARKET_PROJECTIONS),
         'showing_70_plus_only': not show_all,
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'error': error
+        'error': error,
+        'glitched_props': get_glitched_props()
     })
 
 @app.route('/api/active-players')
