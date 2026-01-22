@@ -170,8 +170,9 @@ header h1 {
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-size: 0.95em;
-    color: #2c3e50;
+    font-size: 1em;
+    color: #ffffff;
+    font-weight: 500;
 }
 
 .auto-refresh-toggle input[type="checkbox"] {
@@ -838,9 +839,12 @@ header h1 {
 .high-prob-section h2 {
     color: #ffd700;
     margin-bottom: 10px;
-    font-size: 1.8em;
+    font-size: 2em;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(255, 215, 0, 0.4);
+    -webkit-text-stroke: 1px rgba(255, 215, 0, 0.2);
 }
 
 .high-prob-grid {
@@ -860,8 +864,9 @@ header h1 {
 
 .high-prob-card:hover {
     border-color: #ffed4e;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+    border-width: 4px;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4), 0 0 30px rgba(255, 215, 0, 0.2);
 }
 
 .prob-header {
@@ -874,22 +879,26 @@ header h1 {
 }
 
 .prob-badge {
-    background: #27ae60;
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 1.2em;
-    min-width: 70px;
+    background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+    color: #000000;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 1.3em;
+    min-width: 80px;
     text-align: center;
+    border: 2px solid #00ff88;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3);
 }
 
 .prizepicks-display {
     color: #ffd700;
-    font-weight: bold;
-    font-size: 1.1em;
+    font-weight: 800;
+    font-size: 1.2em;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .prob-details {
@@ -899,35 +908,41 @@ header h1 {
 }
 
 .prob-reasoning {
-    font-size: 0.9em;
-    line-height: 1.6;
-    color: #e0e0e0;
-    padding: 10px;
+    font-size: 1em;
+    line-height: 1.7;
+    color: #ffffff;
+    padding: 14px;
     background: #2a2a2a;
-    border-radius: 4px;
-    border-left: 3px solid #ffd700;
+    border-radius: 8px;
+    border-left: 4px solid #ffd700;
+    border: 2px solid #555;
+    font-weight: 500;
 }
 
 .prob-reasoning strong {
     color: #ffd700;
-    margin-right: 8px;
+    margin-right: 10px;
+    font-weight: 700;
+    font-size: 1.05em;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .prob-stats {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 10px;
+    padding: 14px;
     background: #1a1a1a;
-    border-radius: 4px;
+    border-radius: 8px;
+    border: 2px solid #555;
 }
 
 .stat-item {
     display: flex;
     justify-content: space-between;
-    padding: 4px 0;
-    font-size: 0.9em;
-    border-bottom: 1px solid #333;
+    padding: 8px 0;
+    font-size: 1em;
+    border-bottom: 2px solid #555;
 }
 
 .stat-item:last-child {
@@ -935,12 +950,15 @@ header h1 {
 }
 
 .stat-item span:first-child {
-    color: #888;
+    color: #b0b0b0;
+    font-weight: 600;
 }
 
 .stat-item span:last-child {
     color: #ffd700;
-    font-weight: bold;
+    font-weight: 700;
+    font-size: 1.1em;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .edge-value {
@@ -1235,9 +1253,13 @@ header h1 {
 
 .no-data {
     text-align: center;
-    color: #888;
+    color: #d0d0d0;
     padding: 40px;
-    font-style: italic;
+    font-weight: 500;
+    font-size: 1.1em;
+    background: #1a1a1a;
+    border: 2px solid #555;
+    border-radius: 8px;
 }
 
 .no-edges {
@@ -1257,8 +1279,9 @@ header h1 {
 }
 
 .info {
-    font-size: 0.9em;
-    color: #95a5a6;
+    font-size: 1em;
+    color: #d0d0d0;
+    font-weight: 500;
 }
 
 .projections-section {
@@ -1310,8 +1333,9 @@ header h1 {
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-size: 0.9em;
-    color: #e0e0e0;
+    font-size: 1em;
+    color: #ffffff;
+    font-weight: 500;
 }
 
 .filter-toggle input[type="checkbox"] {
