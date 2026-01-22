@@ -14,7 +14,7 @@
         <header>
             <h1>THE ORACLE <span class="free-tier-badge">FREE TIER</span></h1>
             <p class="subtitle">Sharp angles. No fluff. Pure edge. | Showing 70%+ probability props only</p>
-            <p class="free-tier-notice">Limited to 2 players. <a href="https://render.com" target="_blank">Upgrade to unlock all features</a></p>
+            <p class="free-tier-notice">Limited to 4 players. <a href="https://render.com" target="_blank">Upgrade to unlock all features</a></p>
             <nav class="top-nav">
                 <a href="/yesterdays-bets" class="nav-link">Yesterday's Bets</a>
             </nav>
@@ -78,10 +78,7 @@
             <!-- Load All Players hidden in free tier - backend ready for upgrade -->
             <button onclick="showLineManagement()" class="line-mgmt-btn" id="lineMgmtBtn">📊 Line Management</button>
             <!-- Parlay Calculator hidden in free tier - backend ready for upgrade -->
-            <label class="filter-toggle">
-                <input type="checkbox" id="showAllToggle" onchange="toggleShowAll()">
-                <span>Show All Edges (not just 70%+)</span>
-            </label>
+            <!-- Show All toggle removed - use probability tabs instead -->
             <button onclick="showTacticalFilters()" class="filter-btn" id="filterBtn">🔍 Tactical Filters</button>
         </div>
 
@@ -1176,6 +1173,15 @@
 
         function changeStatType() {
             console.log('[DEBUG] changeStatType() called');
+            
+            // Show immediate visual feedback
+            const refreshBtn = document.getElementById('refreshBtn');
+            const originalText = refreshBtn ? refreshBtn.textContent : '';
+            if (refreshBtn) {
+                refreshBtn.textContent = '⏳ Loading stat...';
+                refreshBtn.disabled = true;
+            }
+            
             try {
                 const statTypeSelect = document.getElementById('statTypeSelect');
                 const statDesc = document.getElementById('statDescription');
@@ -1183,6 +1189,10 @@
                 if (!statTypeSelect) {
                     console.error('[DEBUG] Stat type select not found');
                     alert('Stat type selector not found. Please refresh the page.');
+                    if (refreshBtn) {
+                        refreshBtn.textContent = originalText || '🔄 Refresh Edges';
+                        refreshBtn.disabled = false;
+                    }
                     return;
                 }
                 
@@ -1195,17 +1205,36 @@
                     statDesc.textContent = statCategories[statType].description || '';
                 }
                 
-                // Refresh data with new stat type
+                // Refresh data with new stat type - refreshData will reset button when done
                 if (typeof refreshData === 'function') {
-                    refreshData();
+                    refreshData().finally(() => {
+                        console.log('[DEBUG] Stat type change complete');
+                    });
+                } else {
+                    if (refreshBtn) {
+                        refreshBtn.textContent = originalText || '🔄 Refresh Edges';
+                        refreshBtn.disabled = false;
+                    }
                 }
             } catch (e) {
                 console.error('Error in changeStatType:', e);
+                if (refreshBtn) {
+                    refreshBtn.textContent = '🔄 Refresh Edges';
+                    refreshBtn.disabled = false;
+                }
             }
         }
 
         function setMinProbability(minProb) {
             console.log('[DEBUG] setMinProbability() called with:', minProb);
+            
+            // Show immediate visual feedback
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.textContent = '⏳ Filtering...';
+                refreshBtn.disabled = true;
+            }
+            
             try {
                 currentMinProbability = minProb;
                 

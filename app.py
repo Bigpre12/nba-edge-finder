@@ -426,9 +426,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         
         track_line_changes(MARKET_PROJECTIONS)
         
-        # ULTRA-MINIMAL MODE: Only 2 players to prevent OOM on 512MB free tier
-        # This is the minimum viable configuration
-        max_players = 2
+        # FREE TIER MODE: 4 players to balance usability with memory limits
+        # Increased from 2 for better user experience
+        max_players = 4
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
             print(f"INFO: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout (this is normal)")
@@ -624,8 +624,8 @@ def index():
                             pass
                         return
                     
-                    # ULTRA-MINIMAL: Only 2 players - free tier has 512MB limit
-                    players_to_load = all_players[:2]
+                    # FREE TIER: 4 players - balance usability with memory limits
+                    players_to_load = all_players[:4]
                     print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}
