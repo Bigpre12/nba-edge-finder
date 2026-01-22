@@ -16,10 +16,10 @@ timeout = 360  # 6 minutes - must be longer than edge calculation timeout (5 min
 keepalive = 5
 graceful_timeout = 60  # Increased to 60 seconds to allow more time for graceful shutdown
 
-# Memory management - restart workers VERY frequently to prevent OOM
-# Free tier has only 512MB - must be extremely aggressive
-max_requests = 20  # Restart after only 20 requests to aggressively free memory
-max_requests_jitter = 3
+# ULTRA-MINIMAL MODE: Restart workers after every 10 requests
+# Free tier has only 512MB - maximum aggression required
+max_requests = 10
+max_requests_jitter = 2
 
 # Prevent worker crashes from killing the whole app
 worker_tmp_dir = "/dev/shm"  # Use shared memory if available, falls back to /tmp

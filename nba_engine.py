@@ -47,9 +47,9 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
     if not pid:
         return None
     
-    # Retry logic for API calls with timeout handling
-    max_retries = 5  # Increased from 3
-    retry_delay = 3  # Increased from 2
+    # ULTRA-MINIMAL: Reduced retries to save time and memory
+    max_retries = 2
+    retry_delay = 2
     
     for attempt in range(max_retries):
         try:
@@ -605,9 +605,9 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
     Returns:
         float: Season average, None if error or no data
     """
-    # Retry logic for API calls with timeout handling
-    max_retries = 5  # Increased from 3
-    retry_delay = 3  # Increased from 2
+    # ULTRA-MINIMAL: Reduced retries to save time and memory
+    max_retries = 2
+    retry_delay = 2
     
     for attempt in range(max_retries):
         try:

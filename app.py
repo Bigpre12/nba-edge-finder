@@ -426,10 +426,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         
         track_line_changes(MARKET_PROJECTIONS)
         
-        # Limit number of players to process to prevent timeout and memory issues
-        # Process max 5 players at a time for free tier memory limits (512MB)
-        # This ensures the request completes without OOM kills
-        max_players = 5
+        # ULTRA-MINIMAL MODE: Only 2 players to prevent OOM on 512MB free tier
+        # This is the minimum viable configuration
+        max_players = 2
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
             print(f"INFO: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout (this is normal)")
@@ -625,9 +624,8 @@ def index():
                             pass
                         return
                     
-                    # Load top 5 players only - free tier has 512MB limit
-                    # Aggressively reduced to prevent SIGKILL from OOM
-                    players_to_load = all_players[:5]
+                    # ULTRA-MINIMAL: Only 2 players - free tier has 512MB limit
+                    players_to_load = all_players[:2]
                     print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}
@@ -1248,46 +1246,19 @@ def api_parlay_calculator():
     """Calculate parlay payout for custom bets or get recommendations."""
     try:
         if request.method == 'GET':
-            # Return parlay recommendations based on current edges
-            # Use minimal memory - only get cached edges, don't process new ones
-            import gc
-            gc.collect()
-            
-            global MARKET_PROJECTIONS
-            MARKET_PROJECTIONS = get_market_projections(force_reload=True)
-            
-            # Get edges with minimal processing (max 5 players to save memory)
-            edges, high_prob_props, streaks, factors, _ = get_edges_data(
-                MARKET_PROJECTIONS,
-                stat_type='PTS',
-                max_players=5
-            )
-            
-            # Filter to high probability edges for parlays
-            parlay_edges = [e for e in edges if e.get('probability', 0) >= 65][:10]  # Limit to 10 edges
-            
-            # Build recommendations with memory cleanup between each
-            recommendations = {}
-            
-            recommendations['2_man'] = find_best_parlays(parlay_edges, 2, max_recommendations=3)
-            gc.collect()
-            
-            recommendations['3_man'] = find_best_parlays(parlay_edges, 3, max_recommendations=3)
-            gc.collect()
-            
-            recommendations['4_man'] = find_best_parlays(parlay_edges, 4, max_recommendations=2)
-            gc.collect()
-            
-            recommendations['5_man'] = find_best_parlays(parlay_edges, 5, max_recommendations=2)
-            gc.collect()
-            
-            recommendations['6_man'] = find_best_parlays(parlay_edges, 6, max_recommendations=1)
-            gc.collect()
-            
+            # ULTRA-MINIMAL MODE: Parlay calculator disabled to save memory
+            # Return empty recommendations - feature disabled on free tier
             return jsonify({
                 'success': True,
-                'recommendations': recommendations,
-                'available_edges': len(parlay_edges)
+                'recommendations': {
+                    '2_man': [],
+                    '3_man': [],
+                    '4_man': [],
+                    '5_man': [],
+                    '6_man': []
+                },
+                'available_edges': 0,
+                'message': 'Parlay calculator disabled on free tier to prevent crashes. Upgrade to enable.'
             })
         
         else:  # POST - custom parlay calculation
@@ -1427,9 +1398,9 @@ def api_glitched_props():
 def api_trigger_glitched_scan():
     """Manually trigger a QUICK glitched props scan for instant results."""
     try:
-        print(f"[{datetime.now()}] Manual QUICK glitched props scan triggered (instant results)...")
-        # Use quick_scan=True for instant results (reduced to 5 players for memory)
-        found_glitches = scan_active_players_for_glitches(quick_scan=True, max_players=5)
+        # ULTRA-MINIMAL MODE: Glitched props scanner disabled to save memory
+        print(f"[{datetime.now()}] Glitched props scan DISABLED on free tier")
+        found_glitches = []  # Return empty - feature disabled
         
         return jsonify({
             'success': True,
