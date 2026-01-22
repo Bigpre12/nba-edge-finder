@@ -248,7 +248,30 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
         try:
             # NBA API doesn't support timeout parameter directly
             career_stats = playercareerstats.PlayerCareerStats(player_id=player_id)
-            data_frames = career_stats.get_data_frames()
+            
+            # Wrap get_data_frames() in try/except to catch KeyError for 'resultSet'
+            try:
+                data_frames = career_stats.get_data_frames()
+            except KeyError as ke:
+                # API response doesn't have expected structure (no resultSet key)
+                player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+                if 'resultSet' in str(ke):
+                    # Expected for players with no career stats - don't log as error
+                    return None
+                else:
+                    # Unexpected KeyError - log it
+                    print(f"   ⚠️ KeyError in get_data_frames for {player_info}: {ke}")
+                    return None
+            except Exception as api_e:
+                # Other errors from get_data_frames
+                player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+                error_type = type(api_e).__name__
+                if error_type in ['KeyError', 'AttributeError']:
+                    # Expected for players with no data
+                    return None
+                else:
+                    # Re-raise to be handled by outer exception handler
+                    raise
             
             # Check if we got any data frames
             if not data_frames or len(data_frames) == 0:
