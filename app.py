@@ -428,8 +428,8 @@ def index():
                     # Always ensure default players are included
                     new_projections = ensure_default_projections(new_projections)
                     
-                    # Save whatever we got (even if less than expected)
-                    if new_projections:
+                    # Only save if we got more than just the default 3 players
+                    if new_projections and len(new_projections) > 3:
                         if save_projections(new_projections):
                             MARKET_PROJECTIONS = new_projections
                             print("=" * 60)
@@ -438,9 +438,17 @@ def index():
                             print("=" * 60)
                         else:
                             print("❌ Failed to save projections file")
+                    elif new_projections:
+                        print(f"⚠️ Warning: Only loaded {len(new_projections)} players (expected more)")
+                        print(f"   Players: {', '.join(list(new_projections.keys()))}")
+                        # Still save it if it's better than what we had
+                        if len(new_projections) > len(MARKET_PROJECTIONS):
+                            save_projections(new_projections)
+                            MARKET_PROJECTIONS = new_projections
                     else:
                         print(f"⚠️ Warning: No players loaded")
                         print("   This might be due to NBA API rate limits or network issues.")
+                        print(f"   Current projections still have {len(MARKET_PROJECTIONS)} players")
                 except Exception as e:
                     print(f"❌ Error auto-loading players: {e}")
                     import traceback
@@ -456,16 +464,28 @@ def index():
             if not hasattr(app, '_loading_players'):
                 app._loading_players = False
             
+            # Also check if loading flag is stuck (older than 10 minutes = probably crashed)
+            if hasattr(app, '_loading_start_time'):
+                import time as time_module
+                if time_module.time() - app._loading_start_time > 600:  # 10 minutes
+                    print("⚠️ Previous load thread appears stuck (10+ min), resetting flag...")
+                    app._loading_players = False
+            
             if not app._loading_players:
                 app._loading_players = True
+                import time as time_module
+                app._loading_start_time = time_module.time()  # Track when we started
                 # Start in background thread, don't wait
                 load_thread = threading.Thread(target=background_load, daemon=True)
                 load_thread.start()
                 print(f"🚀 Started background thread to load players...")
                 print(f"   Current projections: {len(MARKET_PROJECTIONS)} players")
                 print(f"   Thread will run in background and save to {PROJECTIONS_FILE}")
+                print(f"   Check logs for progress updates...")
             else:
-                print("⏳ Player loading already in progress, skipping duplicate trigger...")
+                elapsed = int((time_module.time() - app._loading_start_time) / 60) if hasattr(app, '_loading_start_time') else 0
+                print(f"⏳ Player loading already in progress (started {elapsed} min ago), skipping duplicate trigger...")
+                print(f"   If stuck, restart the app or wait for completion.")
         
         # Get selected stat type from request or default to PTS
         stat_type = request.args.get('stat_type', 'PTS')
