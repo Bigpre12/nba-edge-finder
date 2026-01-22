@@ -87,13 +87,15 @@ def find_best_parlays(edges: List[Dict], parlay_size: int, max_recommendations: 
         return []
     
     # Filter to only high-probability edges (60%+ for more options)
-    high_prob_edges = [e for e in edges if e.get('probability', 0) >= 60.0]
+    # Limit to 8 edges max to prevent memory explosion from combinations
+    high_prob_edges = [e for e in edges if e.get('probability', 0) >= 60.0][:8]
     
     if len(high_prob_edges) < parlay_size:
         return []
     
-    # Generate all combinations
-    all_combinations = list(combinations(high_prob_edges, parlay_size))
+    # Generate combinations - limit total combinations to prevent OOM
+    # With 8 edges: C(8,2)=28, C(8,3)=56, C(8,4)=70, C(8,5)=56, C(8,6)=28
+    all_combinations = list(combinations(high_prob_edges, parlay_size))[:100]
     
     # Calculate metrics for each combination
     parlays = []
