@@ -8,6 +8,7 @@ from line_tracker import (
 from glitched_props import (
     add_glitched_prop, get_glitched_props, remove_glitched_prop, update_glitched_prop
 )
+from glitched_props_scanner import scan_active_players_for_glitches, get_scan_status
 from auth import requires_auth
 from cache_manager import clear_old_cache
 from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display
@@ -877,6 +878,43 @@ def api_glitched_props():
                 'success': False,
                 'error': str(e)
             }), 500
+
+@app.route('/api/glitched-props/scan', methods=['POST'])
+@requires_auth
+def api_trigger_glitched_scan():
+    """Manually trigger a glitched props scan."""
+    try:
+        print(f"[{datetime.now()}] Manual glitched props scan triggered...")
+        found_glitches = scan_active_players_for_glitches()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Scan complete. Found {len(found_glitches)} new glitched props.',
+            'found_count': len(found_glitches),
+            'props': get_glitched_props(),
+            'scan_status': get_scan_status()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/glitched-props/status', methods=['GET'])
+@requires_auth
+def api_glitched_scan_status():
+    """Get the status of the automated glitched props scanning system."""
+    try:
+        status = get_scan_status()
+        return jsonify({
+            'success': True,
+            'status': status
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     # Development mode

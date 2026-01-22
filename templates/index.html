@@ -582,8 +582,14 @@
 
         <div class="glitched-props-section">
             <div class="glitched-props-header">
-                <h3>🔴 Glitched Props</h3>
-                <button onclick="showAddGlitchedPropForm()" class="btn-add-glitch">+ Add Glitched Prop</button>
+                <h3>🔴 Glitched Props (Auto-Scanned 24/7)</h3>
+                <div class="glitched-props-actions">
+                    <button onclick="triggerGlitchedScan()" class="btn-scan-glitch">🔍 Run Scan Now</button>
+                    <button onclick="showAddGlitchedPropForm()" class="btn-add-glitch">+ Add Manual</button>
+                </div>
+            </div>
+            <div id="glitchedScanStatus" class="scan-status-bar">
+                <span id="scanStatusText">Loading scan status...</span>
             </div>
             <div class="table-container">
                 <table class="glitched-props-table" id="glitchedPropsTable">
@@ -1649,6 +1655,10 @@
             setInterval(loadDailyUpdateStatus, 60000);
             // Check projections status
             checkProjectionsStatus();
+            // Load glitched props scan status
+            loadGlitchedScanStatus();
+            // Refresh scan status every 5 minutes
+            setInterval(loadGlitchedScanStatus, 300000);
         });
     </script>
     <script src="{{ url_for('static', filename='parlay_ui.js') }}"></script>

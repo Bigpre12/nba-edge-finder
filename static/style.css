@@ -1319,6 +1319,44 @@ header h1 {
     gap: 15px;
 }
 
+.glitched-props-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.scan-status-bar {
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    color: #e0e0e0;
+}
+
+.btn-scan-glitch {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9em;
+    transition: all 0.3s;
+}
+
+.btn-scan-glitch:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.btn-scan-glitch:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .glitched-props-header h3 {
     color: #e74c3c;
     font-size: 1.5em;
