@@ -1097,6 +1097,7 @@
 
         let refreshTimeout = null;
         let isRefreshing = false;
+        let currentMinProbability = 70;  // Probability filter (60/70/80/All)
         
         function buildFilterParams() {
             const params = new URLSearchParams();
@@ -1210,9 +1211,6 @@
             refreshData();
         }
 
-        // Current minimum probability filter
-        let currentMinProbability = 70;
-        
         function setMinProbability(minProb) {
             currentMinProbability = minProb;
             
