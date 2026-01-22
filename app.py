@@ -1058,18 +1058,27 @@ if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 else:
     # Production mode - disable debug
-    app.config['DEBUG'] = False
-    # Initialize scheduler for production (delayed to avoid blocking startup)
-    # Use a simple thread to initialize scheduler after app starts
-    import threading
-    def delayed_scheduler_init():
-        import time
-        time.sleep(2)  # Wait 2 seconds for app to fully start
-        try:
-            init_scheduler()
-        except Exception as e:
-            print(f"Warning: Scheduler initialization failed: {e}")
-    
-    scheduler_thread = threading.Thread(target=delayed_scheduler_init, daemon=True)
-    scheduler_thread.start()
-    print("App starting in production mode. Scheduler will initialize in background.")
+    try:
+        app.config['DEBUG'] = False
+        # Initialize scheduler for production (delayed to avoid blocking startup)
+        # Use a simple thread to initialize scheduler after app starts
+        import threading
+        def delayed_scheduler_init():
+            import time
+            time.sleep(2)  # Wait 2 seconds for app to fully start
+            try:
+                init_scheduler()
+            except Exception as e:
+                print(f"Warning: Scheduler initialization failed: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        scheduler_thread = threading.Thread(target=delayed_scheduler_init, daemon=True)
+        scheduler_thread.start()
+        print("App starting in production mode. Scheduler will initialize in background.")
+    except Exception as e:
+        print(f"Error in production mode initialization: {e}")
+        import traceback
+        traceback.print_exc()
+        # Don't fail startup - continue anyway
+        pass
