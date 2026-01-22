@@ -565,14 +565,25 @@ def index():
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"Fatal error in index route: {e}")
+        error_type = type(e).__name__
+        error_msg = str(e)
+        print("=" * 80)
+        print(f"FATAL ERROR in index route: {error_type}: {error_msg}")
+        print("=" * 80)
         print(error_trace)
+        print("=" * 80)
+        # Log to stderr as well for Gunicorn to capture
+        import sys
+        sys.stderr.write(f"ERROR in index route: {error_type}: {error_msg}\n")
+        sys.stderr.write(error_trace + "\n")
         return f"""
         <html>
         <head><title>Error</title></head>
         <body style="font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff;">
             <h1 style="color: #e74c3c;">Internal Server Error</h1>
             <p>An error occurred while loading the page.</p>
+            <p><strong>Error Type:</strong> {error_type}</p>
+            <p><strong>Error Message:</strong> {error_msg}</p>
             <pre style="background: #2a2a2a; padding: 15px; border-radius: 4px; overflow-x: auto;">{error_trace}</pre>
             <p><a href="/ping" style="color: #3498db;">Test ping endpoint</a></p>
         </body>
