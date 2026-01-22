@@ -19,7 +19,7 @@ except ImportError:
 from glitched_props import add_glitched_prop, get_glitched_props
 
 # Configuration
-SCAN_INTERVAL_MINUTES = 15  # Scan every 15 minutes
+SCAN_INTERVAL_MINUTES = 5  # Background scan every 5 minutes (for duplicate checking)
 PLATFORMS = ['PrizePicks', 'Underdog', 'DraftKings', 'FanDuel', 'BetMGM', 'Caesars', 'PointsBet']
 
 # Cache for recent scans to avoid duplicates
@@ -227,7 +227,7 @@ def get_relevant_players_for_today():
     
     return relevant_players
 
-def scan_active_players_for_glitches():
+def scan_active_players_for_glitches(quick_scan=False, max_players=None):
     """
     Scan relevant players for glitched props across platforms.
     Focuses on:
@@ -235,9 +235,14 @@ def scan_active_players_for_glitches():
     - Role players on hot streaks
     - Players with positive trending performance
     
+    Args:
+        quick_scan: If True, only scan top 10-20 players for instant results
+        max_players: Maximum number of players to scan (None = all relevant)
+    
     This is the main scanning function that runs periodically.
     """
-    print(f"[{datetime.now()}] Starting automated glitched props scan...")
+    scan_type = "QUICK" if quick_scan else "FULL"
+    print(f"[{datetime.now()}] Starting {scan_type} glitched props scan...")
     
     try:
         # Get relevant players (not all active players)
@@ -247,14 +252,18 @@ def scan_active_players_for_glitches():
             print("No relevant players found for scanning")
             return []
         
-        print(f"Scanning {len(relevant_players)} relevant players across {len(PLATFORMS)} platforms...")
+        # Limit players for quick scan (top 10-20 highest priority)
+        if quick_scan:
+            max_players = max_players or 15  # Default to 15 for instant results
+            players_to_scan = relevant_players[:max_players]
+            print(f"QUICK SCAN: Scanning top {len(players_to_scan)} priority players for instant results...")
+        else:
+            players_to_scan = relevant_players[:max_players] if max_players else relevant_players
+            print(f"FULL SCAN: Scanning {len(players_to_scan)} relevant players across {len(PLATFORMS)} platforms...")
         
         recent_scans = load_recent_scans()
         found_glitches = []
         scanned_count = 0
-        
-        # Scan all relevant players (they're already filtered and prioritized)
-        players_to_scan = relevant_players
         
         for player_data in players_to_scan:
             player = player_data['player']

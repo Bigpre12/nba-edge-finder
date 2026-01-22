@@ -303,10 +303,10 @@ def init_scheduler():
                     traceback.print_exc()
             
             def glitched_props_scan_job():
-                """Run glitched props scan every 15 minutes (24/7)."""
+                """Run glitched props scan every 5 minutes (24/7) in background."""
                 try:
-                    print(f"[{datetime.now()}] Running automated glitched props scan...")
-                    found_glitches = scan_active_players_for_glitches()
+                    print(f"[{datetime.now()}] Running automated background glitched props scan...")
+                    found_glitches = scan_active_players_for_glitches(quick_scan=False)  # Full scan in background
                     if found_glitches:
                         print(f"Found {len(found_glitches)} new glitched props")
                     else:
@@ -330,13 +330,13 @@ def init_scheduler():
                 replace_existing=True
             )
             
-            # Schedule glitched props scan every 15 minutes (around the clock)
+            # Schedule glitched props scan every 5 minutes (24/7) in background
             scheduler.add_job(
                 func=glitched_props_scan_job,
                 trigger="interval",
-                minutes=15,
+                minutes=5,
                 id='glitched_props_scan',
-                name='Glitched Props Scan (24/7)',
+                name='Glitched Props Scan (24/7 Background)',
                 replace_existing=True
             )
             
@@ -1317,19 +1317,25 @@ def api_glitched_props():
 @app.route('/api/glitched-props/scan', methods=['POST'])
 @requires_auth
 def api_trigger_glitched_scan():
-    """Manually trigger a glitched props scan."""
+    """Manually trigger a QUICK glitched props scan for instant results."""
     try:
-        print(f"[{datetime.now()}] Manual glitched props scan triggered...")
-        found_glitches = scan_active_players_for_glitches()
+        print(f"[{datetime.now()}] Manual QUICK glitched props scan triggered (instant results)...")
+        # Use quick_scan=True for instant results (top 15 players)
+        found_glitches = scan_active_players_for_glitches(quick_scan=True, max_players=15)
         
         return jsonify({
             'success': True,
-            'message': f'Scan complete. Found {len(found_glitches)} new glitched props.',
+            'message': f'Quick scan complete! Found {len(found_glitches)} new glitched props.',
             'found_count': len(found_glitches),
             'props': get_glitched_props(),
-            'scan_status': get_scan_status()
+            'scan_status': get_scan_status(),
+            'scan_type': 'quick'
         })
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in api_trigger_glitched_scan: {e}", file=sys.stderr)
+        print(error_trace, file=sys.stderr)
         return jsonify({
             'success': False,
             'error': str(e)

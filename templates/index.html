@@ -1801,10 +1801,141 @@
                 }
             }, 15000); // Reduced to 15 seconds for faster updates
             // Load glitched props scan status
+            loadGlitchedProps();
             loadGlitchedScanStatus();
             // Refresh scan status every 5 minutes
             setInterval(loadGlitchedScanStatus, 300000);
         });
+
+        // Glitched Props Functions
+        async function triggerGlitchedScan() {
+            const btn = document.querySelector('.btn-scan-glitch');
+            const statusText = document.getElementById('scanStatusText');
+            
+            if (!btn) return;
+            
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⚡ Scanning... (Instant)';
+            
+            if (statusText) {
+                statusText.textContent = '⚡ Running quick scan for instant results...';
+                statusText.style.color = '#ffd700';
+            }
+            
+            try {
+                const response = await fetch('/api/glitched-props/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    btn.textContent = '✅ Scan Complete!';
+                    if (statusText) {
+                        statusText.textContent = `✅ Quick scan complete! Found ${data.found_count} new glitched props.`;
+                        statusText.style.color = '#00ff88';
+                    }
+                    
+                    // Reload glitched props table
+                    loadGlitchedProps();
+                    
+                    // Show success message
+                    if (data.found_count > 0) {
+                        alert(`✅ Found ${data.found_count} new glitched props!\n\n${data.message}`);
+                    } else {
+                        alert(`✅ Quick scan complete!\n\nNo new glitched props found this scan.`);
+                    }
+                    
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }, 3000);
+                } else {
+                    btn.textContent = '❌ Error';
+                    if (statusText) {
+                        statusText.textContent = `❌ Error: ${data.error || 'Scan failed'}`;
+                        statusText.style.color = '#ff4444';
+                    }
+                    alert('❌ Error: ' + (data.error || 'Scan failed'));
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }, 3000);
+                }
+            } catch (error) {
+                btn.textContent = '❌ Error';
+                if (statusText) {
+                    statusText.textContent = `❌ Error: ${error.message}`;
+                    statusText.style.color = '#ff4444';
+                }
+                alert('❌ Error: ' + error.message);
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            }
+        }
+
+        async function loadGlitchedProps() {
+            try {
+                const response = await fetch('/api/glitched-props');
+                const data = await response.json();
+                const tbody = document.getElementById('glitchedPropsTableBody');
+                
+                if (!tbody) return;
+                
+                if (data.props && data.props.length > 0) {
+                    tbody.innerHTML = data.props.map(prop => `
+                        <tr data-id="${prop.id}">
+                            <td>${prop.prop || 'N/A'}</td>
+                            <td>${prop.reasoning || 'N/A'}</td>
+                            <td>
+                                <span class="rating-badge rating-${prop.rating}">
+                                    ${prop.rating}/10
+                                </span>
+                            </td>
+                            <td>${prop.platform || 'N/A'}</td>
+                            <td>${prop.updated_at || prop.created_at || 'N/A'}</td>
+                            <td>
+                                <button onclick="editGlitchedProp(${prop.id})" class="btn-edit">Edit</button>
+                                <button onclick="deleteGlitchedProp(${prop.id})" class="btn-delete">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #888;">No glitched props found</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading glitched props:', error);
+            }
+        }
+
+        async function loadGlitchedScanStatus() {
+            try {
+                const response = await fetch('/api/glitched-props/status');
+                const data = await response.json();
+                const statusText = document.getElementById('scanStatusText');
+                
+                if (!statusText) return;
+                
+                if (data.last_scan) {
+                    const lastScan = new Date(data.last_scan);
+                    const now = new Date();
+                    const minsAgo = Math.floor((now - lastScan) / (1000 * 60));
+                    
+                    statusText.textContent = `🔄 Background scan: ${data.total_scanned} players scanned, ${data.glitches_found} glitches found | Last scan: ${minsAgo} min ago | Next scan in ~${data.scan_interval_minutes} min`;
+                    statusText.style.color = '#b0b0b0';
+                } else {
+                    statusText.textContent = '⏳ Background scanning starting... (runs every 5 minutes)';
+                    statusText.style.color = '#888';
+                }
+            } catch (error) {
+                console.error('Error loading scan status:', error);
+            }
+        }
     </script>
     <script src="{{ url_for('static', filename='parlay_ui.js') }}"></script>
 </body>
