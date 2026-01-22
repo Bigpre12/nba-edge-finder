@@ -373,6 +373,10 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
                     signal.alarm(0)  # Cancel timeout
                 except (AttributeError, OSError):
                     pass
+        except TimeoutError as e:
+            print(f"WARNING: Edge calculation timed out after 5 minutes: {e}")
+            all_edges = []
+            streaks = []
         except Exception as e:
             print(f"Error in check_for_edges: {e}")
             import traceback
