@@ -529,33 +529,42 @@ def index():
             print(f"Error validating stat type: {e}")
             stat_type = 'PTS'
         
-        # Get edges - only 70%+ probability by default
-        # This will work even if players are still loading
-        # Initialize with safe defaults first
-        edges = []
-        streaks = []
-        high_prob_props = []
-        parlay_recommendations = {}
-        error = None
-        
-        try:
-            edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True, stat_type=stat_type)
-            # Ensure all are the correct type
-            if not isinstance(edges, list):
-                edges = []
-            if not isinstance(streaks, list):
-                streaks = []
-            if not isinstance(high_prob_props, list):
-                high_prob_props = []
-            if not isinstance(parlay_recommendations, dict):
-                parlay_recommendations = {}
-            if error is None:
-                error = None
-        except Exception as e:
-            print(f"Error getting edges data: {e}")
-            import traceback
-            traceback.print_exc()
-            edges, streaks, high_prob_props, parlay_recommendations, error = [], [], [], {}, f"Error loading edges: {str(e)}"
+        # If no players, skip edge calculation entirely to prevent timeout
+        if not MARKET_PROJECTIONS or len(MARKET_PROJECTIONS) == 0:
+            print("INFO: No players loaded, skipping edge calculation to prevent timeout")
+            edges = []
+            streaks = []
+            high_prob_props = []
+            parlay_recommendations = {}
+            error = None
+        else:
+            # Get edges - only 70%+ probability by default
+            # This will work even if players are still loading
+            # Initialize with safe defaults first
+            edges = []
+            streaks = []
+            high_prob_props = []
+            parlay_recommendations = {}
+            error = None
+            
+            try:
+                edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True, stat_type=stat_type)
+                # Ensure all are the correct type
+                if not isinstance(edges, list):
+                    edges = []
+                if not isinstance(streaks, list):
+                    streaks = []
+                if not isinstance(high_prob_props, list):
+                    high_prob_props = []
+                if not isinstance(parlay_recommendations, dict):
+                    parlay_recommendations = {}
+                if error is None:
+                    error = None
+            except Exception as e:
+                print(f"Error getting edges data: {e}")
+                import traceback
+                traceback.print_exc()
+                edges, streaks, high_prob_props, parlay_recommendations, error = [], [], [], {}, f"Error loading edges: {str(e)}"
         
         # Get stat categories for UI - with error handling
         # Initialize with safe defaults first
