@@ -562,6 +562,305 @@ header h1 {
     font-weight: 600;
 }
 
+/* Streak Analytics Styles */
+.streak-analytics {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 10px;
+    border-left: 3px solid #ffd700;
+}
+
+.streak-analytics-panel {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 8px;
+}
+
+/* Regression Indicators */
+.regression-indicator {
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.regression-indicator.regression-high {
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid rgba(231, 76, 60, 0.5);
+}
+
+.regression-indicator.regression-medium {
+    background: rgba(243, 156, 18, 0.2);
+    border: 1px solid rgba(243, 156, 18, 0.5);
+}
+
+.regression-indicator.regression-low {
+    background: rgba(39, 174, 96, 0.2);
+    border: 1px solid rgba(39, 174, 96, 0.5);
+}
+
+.regression-header {
+    font-weight: 700;
+    font-size: 0.9em;
+    margin-bottom: 6px;
+}
+
+.regression-high .regression-header {
+    color: #e74c3c;
+}
+
+.regression-medium .regression-header {
+    color: #f39c12;
+}
+
+.regression-low .regression-header {
+    color: #27ae60;
+}
+
+.regression-warnings {
+    font-size: 0.8em;
+    color: #999;
+    margin-top: 6px;
+}
+
+.warning-item {
+    padding: 2px 0;
+}
+
+.regression-mini {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65em;
+    font-weight: 700;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.regression-mini.regression-high {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.regression-mini.regression-medium {
+    background: #f39c12;
+    color: #000;
+}
+
+.regression-mini.regression-low {
+    background: #27ae60;
+    color: #fff;
+}
+
+/* Streak Card Regression Borders */
+.streak-card.regression-high {
+    border-left: 4px solid #e74c3c;
+}
+
+.streak-card.regression-medium {
+    border-left: 4px solid #f39c12;
+}
+
+/* Historical Patterns */
+.historical-patterns {
+    background: rgba(52, 152, 219, 0.1);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.pattern-header {
+    font-weight: 600;
+    font-size: 0.85em;
+    color: #3498db;
+    margin-bottom: 8px;
+}
+
+.pattern-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8em;
+    padding: 3px 0;
+    color: #ccc;
+}
+
+.pattern-row span:last-child {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Line Correlation */
+.line-correlation {
+    background: rgba(155, 89, 182, 0.1);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.correlation-header {
+    font-weight: 600;
+    font-size: 0.85em;
+    color: #9b59b6;
+    margin-bottom: 8px;
+}
+
+.correlation-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8em;
+    padding: 3px 0;
+    color: #ccc;
+}
+
+.correlation-row .hit-rate {
+    color: #27ae60;
+    font-weight: 700;
+}
+
+.line-suggestion {
+    font-size: 0.8em;
+    color: #ffd700;
+    padding: 6px;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 4px;
+    margin-top: 6px;
+}
+
+/* Streak EV Adjustment */
+.ev-adjustment {
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.ev-adjustment.ev-positive {
+    background: rgba(39, 174, 96, 0.15);
+    border: 1px solid rgba(39, 174, 96, 0.4);
+}
+
+.ev-adjustment.ev-negative {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.ev-header {
+    font-weight: 700;
+    font-size: 0.95em;
+}
+
+.ev-positive .ev-header {
+    color: #27ae60;
+}
+
+.ev-negative .ev-header {
+    color: #e74c3c;
+}
+
+.ev-reasons {
+    font-size: 0.75em;
+    color: #999;
+    margin-top: 6px;
+}
+
+.ev-reason {
+    padding: 2px 0;
+}
+
+/* Streak EV Mini Badge */
+.streak-ev-mini {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.streak-ev-mini.ev-positive {
+    background: rgba(39, 174, 96, 0.2);
+    color: #27ae60;
+}
+
+.streak-ev-mini.ev-negative {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
+
+/* Streak Badge Styles */
+.streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.streak-badge.streak-over {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.3) 0%, rgba(46, 204, 113, 0.2) 100%);
+    color: #27ae60;
+    border: 1px solid rgba(39, 174, 96, 0.5);
+}
+
+.streak-badge.streak-under {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.3) 0%, rgba(192, 57, 43, 0.2) 100%);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.5);
+}
+
+.streak-badge-large {
+    display: block;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 700;
+    text-align: center;
+}
+
+.streak-badge-large.streak-over {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.4) 0%, rgba(46, 204, 113, 0.3) 100%);
+    color: #27ae60;
+    border: 2px solid rgba(39, 174, 96, 0.6);
+}
+
+.streak-badge-large.streak-under {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.4) 0%, rgba(192, 57, 43, 0.3) 100%);
+    color: #e74c3c;
+    border: 2px solid rgba(231, 76, 60, 0.6);
+}
+
+/* Streak Cards */
+.streak-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.streak-card:hover {
+    border-color: rgba(255, 215, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.streak-card.streak-over {
+    border-left: 4px solid #27ae60;
+}
+
+.streak-card.streak-under {
+    border-left: 4px solid #e74c3c;
+}
+
+.streaks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
 .load-progress {
     margin: 20px 0;
     padding: 20px;

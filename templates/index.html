@@ -305,7 +305,17 @@
                             {% if edge.streak and edge.streak.active %}
                             <div class="streak-badge streak-{{ edge.streak.streak_type|lower }}">
                                 🔥 {{ edge.streak.streak_count }}-game {{ edge.streak.streak_type }} streak
+                                {% if edge.streak.analytics and edge.streak.analytics.regression %}
+                                <span class="regression-mini regression-{{ edge.streak.analytics.regression.risk_level }}">
+                                    {{ edge.streak.analytics.regression.risk_level|upper }}
+                                </span>
+                                {% endif %}
                             </div>
+                            {% if edge.streak.analytics and edge.streak.analytics.ev_adjustment %}
+                            <div class="streak-ev-mini {% if edge.streak.analytics.ev_adjustment.adjustment_pct > 0 %}ev-positive{% else %}ev-negative{% endif %}">
+                                Streak EV: {% if edge.streak.analytics.ev_adjustment.adjustment_pct > 0 %}+{% endif %}{{ edge.streak.analytics.ev_adjustment.adjustment_pct }}%
+                            </div>
+                            {% endif %}
                             {% endif %}
                                 {% if edge.factors %}
                                 <div class="performance-factors">
@@ -512,10 +522,10 @@
             {% if streaks %}
                 <div class="streaks-section">
                     <h2>🔥 Active Streaks (<span id="streakCount">{{ streaks|length }}</span>)</h2>
-                    <p class="section-subtitle">Players consistently hitting OVER/UNDER for 2+ games</p>
+                    <p class="section-subtitle">Players consistently hitting OVER/UNDER for 2+ games - with regression analysis</p>
                     <div class="streaks-grid" id="streaksGrid">
                         {% for streak in streaks %}
-                        <div class="streak-card streak-{{ streak.streak_type|lower }}">
+                        <div class="streak-card streak-{{ streak.streak_type|lower }} {% if streak.streak_analytics and streak.streak_analytics.regression.risk_level == 'high' %}regression-high{% elif streak.streak_analytics and streak.streak_analytics.regression.risk_level == 'medium' %}regression-medium{% endif %}">
                             <div class="player-name">{{ streak.player }}</div>
                             <div class="streak-details">
                                 <div class="stat-row">
@@ -533,6 +543,85 @@
                                         🔥 {{ streak.streak_count }}-game {{ streak.streak_type }} streak
                                     </div>
                                 </div>
+                                
+                                {% if streak.streak_analytics %}
+                                <!-- Streak Analytics Panel -->
+                                <div class="streak-analytics">
+                                    <!-- Regression Warning -->
+                                    {% if streak.streak_analytics.regression %}
+                                    <div class="regression-indicator regression-{{ streak.streak_analytics.regression.risk_level }}">
+                                        <div class="regression-header">
+                                            {% if streak.streak_analytics.regression.risk_level == 'high' %}
+                                            ⚠️ HIGH Regression Risk ({{ streak.streak_analytics.regression.risk_score }}%)
+                                            {% elif streak.streak_analytics.regression.risk_level == 'medium' %}
+                                            🟡 Medium Regression Risk ({{ streak.streak_analytics.regression.risk_score }}%)
+                                            {% else %}
+                                            🟢 Low Regression Risk
+                                            {% endif %}
+                                        </div>
+                                        {% if streak.streak_analytics.regression.warnings %}
+                                        <div class="regression-warnings">
+                                            {% for warning in streak.streak_analytics.regression.warnings[:3] %}
+                                            <div class="warning-item">• {{ warning }}</div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Historical Performance -->
+                                    {% if streak.streak_analytics.historical_patterns %}
+                                    <div class="historical-patterns">
+                                        <div class="pattern-header">📊 Historical Streak Patterns</div>
+                                        <div class="pattern-row">
+                                            <span>Avg {{ streak.streak_type }} streak:</span>
+                                            <span>{{ streak.streak_analytics.historical_patterns.avg_over_streak_length if streak.streak_type == 'OVER' else streak.streak_analytics.historical_patterns.avg_under_streak_length }} games</span>
+                                        </div>
+                                        <div class="pattern-row">
+                                            <span>Max {{ streak.streak_type }} streak:</span>
+                                            <span>{{ streak.streak_analytics.historical_patterns.max_over_streak if streak.streak_type == 'OVER' else streak.streak_analytics.historical_patterns.max_under_streak }} games</span>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Line Correlation -->
+                                    {% if streak.streak_analytics.line_correlation %}
+                                    <div class="line-correlation">
+                                        <div class="correlation-header">📈 Line Correlation</div>
+                                        <div class="correlation-row">
+                                            <span>Hit Rate ({{ streak.streak_type }}):</span>
+                                            <span class="hit-rate">{{ streak.streak_analytics.line_correlation.hit_rate_over if streak.streak_type == 'OVER' else streak.streak_analytics.line_correlation.hit_rate_under }}%</span>
+                                        </div>
+                                        <div class="correlation-row">
+                                            <span>Avg vs Line:</span>
+                                            <span>{{ streak.streak_analytics.line_correlation.avg_vs_line|default(0) }}</span>
+                                        </div>
+                                        {% if streak.streak_analytics.line_correlation.line_accuracy != 'accurate' %}
+                                        <div class="line-suggestion">
+                                            💡 {{ streak.streak_analytics.line_correlation.line_suggestion|default('') }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- EV Adjustment -->
+                                    {% if streak.streak_analytics.ev_adjustment %}
+                                    <div class="ev-adjustment {% if streak.streak_analytics.ev_adjustment.adjustment_pct > 0 %}ev-positive{% elif streak.streak_analytics.ev_adjustment.adjustment_pct < 0 %}ev-negative{% endif %}">
+                                        <div class="ev-header">
+                                            Streak EV: {% if streak.streak_analytics.ev_adjustment.adjustment_pct > 0 %}+{% endif %}{{ streak.streak_analytics.ev_adjustment.adjustment_pct }}%
+                                        </div>
+                                        {% if streak.streak_analytics.ev_adjustment.reasoning %}
+                                        <div class="ev-reasons">
+                                            {% for reason in streak.streak_analytics.ev_adjustment.reasoning[:2] %}
+                                            <div class="ev-reason">{{ reason }}</div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                
                                 {% if streak.factors %}
                                 <div class="performance-factors">
                                     <div class="factors-header" onclick="toggleFactors(this)">
@@ -772,7 +861,7 @@
                         <div class="edges-grid" id="edgesGrid">
                             ${pageEdges.map(edge => {
                                 const streakBadge = edge.streak && edge.streak.active 
-                                    ? `<div class="streak-badge streak-${edge.streak.streak_type.toLowerCase()}">🔥 ${edge.streak.streak_count}-game ${edge.streak.streak_type} streak</div>`
+                                    ? renderStreakBadge(edge.streak)
                                     : '';
                                 
                                 if (edge.oracle) {
@@ -1927,9 +2016,107 @@
                         <div class="recommendation"><strong>${edge.recommendation || 'N/A'}</strong></div>
                     </div>
                     `}
-                    ${edge.streak && edge.streak.active ? `<div class="streak-badge streak-${edge.streak.streak_type?.toLowerCase()}">🔥 ${edge.streak.streak_count}-game ${edge.streak.streak_type} streak</div>` : ''}
+                    ${edge.streak && edge.streak.active ? renderStreakBadge(edge.streak) : ''}
                 </div>
             `;
+        }
+        
+        function renderStreakBadge(streak) {
+            if (!streak || !streak.active) return '';
+            
+            const analytics = streak.analytics || {};
+            const regression = analytics.regression || {};
+            const evAdjustment = analytics.ev_adjustment || {};
+            
+            // Regression indicator
+            const regressionMini = regression.risk_level ? 
+                `<span class="regression-mini regression-${regression.risk_level}">${regression.risk_level.toUpperCase()}</span>` : '';
+            
+            // EV adjustment
+            const evMini = evAdjustment.adjustment_pct !== undefined && evAdjustment.adjustment_pct !== 0 ? 
+                `<div class="streak-ev-mini ${evAdjustment.adjustment_pct > 0 ? 'ev-positive' : 'ev-negative'}">
+                    Streak EV: ${evAdjustment.adjustment_pct > 0 ? '+' : ''}${evAdjustment.adjustment_pct}%
+                </div>` : '';
+            
+            return `
+                <div class="streak-badge streak-${streak.streak_type?.toLowerCase() || 'over'}">
+                    🔥 ${streak.streak_count}-game ${streak.streak_type} streak
+                    ${regressionMini}
+                </div>
+                ${evMini}
+            `;
+        }
+        
+        function renderStreakAnalytics(streak) {
+            if (!streak || !streak.analytics) return '';
+            
+            const analytics = streak.analytics;
+            const regression = analytics.regression || {};
+            const historical = analytics.historical_patterns || {};
+            const lineCorr = analytics.line_correlation || {};
+            const evAdj = analytics.ev_adjustment || {};
+            
+            let html = '<div class="streak-analytics-panel">';
+            
+            // Regression Warning
+            if (regression.risk_level) {
+                const riskIcon = regression.risk_level === 'high' ? '⚠️' : (regression.risk_level === 'medium' ? '🟡' : '🟢');
+                html += `
+                    <div class="regression-indicator regression-${regression.risk_level}">
+                        <div class="regression-header">${riskIcon} ${regression.risk_level.toUpperCase()} Regression Risk (${regression.risk_score || 0}%)</div>
+                        ${regression.warnings && regression.warnings.length > 0 ? `
+                            <div class="regression-warnings">
+                                ${regression.warnings.slice(0, 3).map(w => `<div class="warning-item">• ${w}</div>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            // Historical Performance
+            if (historical.total_streaks_found !== undefined) {
+                const avgStreak = streak.streak_type === 'OVER' ? historical.avg_over_streak_length : historical.avg_under_streak_length;
+                const maxStreak = streak.streak_type === 'OVER' ? historical.max_over_streak : historical.max_under_streak;
+                html += `
+                    <div class="historical-patterns">
+                        <div class="pattern-header">📊 Historical Patterns</div>
+                        <div class="pattern-row"><span>Avg ${streak.streak_type} streak:</span><span>${avgStreak || 0} games</span></div>
+                        <div class="pattern-row"><span>Max ${streak.streak_type} streak:</span><span>${maxStreak || 0} games</span></div>
+                    </div>
+                `;
+            }
+            
+            // Line Correlation
+            if (lineCorr.hit_rate_over !== undefined) {
+                const hitRate = streak.streak_type === 'OVER' ? lineCorr.hit_rate_over : lineCorr.hit_rate_under;
+                html += `
+                    <div class="line-correlation">
+                        <div class="correlation-header">📈 Line Correlation</div>
+                        <div class="correlation-row"><span>Hit Rate (${streak.streak_type}):</span><span class="hit-rate">${hitRate || 0}%</span></div>
+                        <div class="correlation-row"><span>Avg vs Line:</span><span>${lineCorr.avg_vs_line || 0}</span></div>
+                        ${lineCorr.line_accuracy !== 'accurate' && lineCorr.line_suggestion ? `
+                            <div class="line-suggestion">💡 ${lineCorr.line_suggestion}</div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            // EV Adjustment
+            if (evAdj.adjustment_pct !== undefined && evAdj.adjustment_pct !== 0) {
+                html += `
+                    <div class="ev-adjustment ${evAdj.adjustment_pct > 0 ? 'ev-positive' : 'ev-negative'}">
+                        <div class="ev-header">Streak EV: ${evAdj.adjustment_pct > 0 ? '+' : ''}${evAdj.adjustment_pct}%</div>
+                        ${evAdj.reasoning && evAdj.reasoning.length > 0 ? `
+                            <div class="ev-reasons">
+                                ${evAdj.reasoning.slice(0, 2).map(r => `<div class="ev-reason">${r}</div>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            return html;
         }
         
         function goToPage(page) {

@@ -212,6 +212,284 @@ def calculate_streak(player_name, line, stat_type='PTS', season='2023-24', min_s
         'active': current_streak >= min_streak
     }
 
+
+def calculate_enhanced_streak_analytics(player_name, line, stat_type='PTS', season='2023-24', min_streak=2):
+    """
+    Calculate comprehensive streak analytics including:
+    - Current streak status
+    - Historical performance during streaks
+    - Regression warning indicators
+    - Correlation with current line
+    - EV adjustments for streaks
+    
+    Args:
+        player_name (str): Player's full name
+        line (float): Betting line/projection
+        stat_type (str): Stat type to check
+        season (str): NBA season
+        min_streak (int): Minimum consecutive games for streak
+    
+    Returns:
+        dict: Comprehensive streak analytics
+    """
+    # Get extended game history for analysis (20 games)
+    games_list = fetch_recent_games(player_name, stat_type, season, games=20)
+    if not games_list or len(games_list) < min_streak:
+        return {
+            'streak_count': 0,
+            'streak_type': None,
+            'active': False,
+            'analytics': None
+        }
+    
+    # Calculate basic streak
+    basic_streak = calculate_streak(player_name, line, stat_type, season, min_streak)
+    
+    # Extract stat values
+    stat_values = [g['stat_value'] for g in games_list]
+    
+    # Calculate historical streak patterns
+    all_streaks = []
+    current_run = 0
+    current_run_type = None
+    
+    for i, value in enumerate(stat_values):
+        if value > line:
+            hit_type = 'OVER'
+        elif value < line:
+            hit_type = 'UNDER'
+        else:
+            hit_type = 'PUSH'
+        
+        if hit_type == 'PUSH':
+            if current_run >= min_streak:
+                all_streaks.append({'type': current_run_type, 'length': current_run, 'ended_at': i})
+            current_run = 0
+            current_run_type = None
+        elif current_run_type is None:
+            current_run_type = hit_type
+            current_run = 1
+        elif current_run_type == hit_type:
+            current_run += 1
+        else:
+            if current_run >= min_streak:
+                all_streaks.append({'type': current_run_type, 'length': current_run, 'ended_at': i})
+            current_run_type = hit_type
+            current_run = 1
+    
+    # Historical streak stats
+    over_streaks = [s for s in all_streaks if s['type'] == 'OVER']
+    under_streaks = [s for s in all_streaks if s['type'] == 'UNDER']
+    
+    avg_over_streak = sum(s['length'] for s in over_streaks) / len(over_streaks) if over_streaks else 0
+    avg_under_streak = sum(s['length'] for s in under_streaks) / len(under_streaks) if under_streaks else 0
+    max_over_streak = max((s['length'] for s in over_streaks), default=0)
+    max_under_streak = max((s['length'] for s in under_streaks), default=0)
+    
+    # Calculate performance during streaks
+    streak_performance = {
+        'during_over_streaks': [],
+        'during_under_streaks': [],
+        'non_streak': []
+    }
+    
+    in_streak = False
+    streak_start = 0
+    
+    for i, value in enumerate(stat_values):
+        if value > line:
+            if not in_streak or (in_streak and streak_type_temp == 'OVER'):
+                streak_performance['during_over_streaks'].append(value)
+            else:
+                streak_performance['non_streak'].append(value)
+            in_streak = True
+            streak_type_temp = 'OVER'
+        elif value < line:
+            if not in_streak or (in_streak and streak_type_temp == 'UNDER'):
+                streak_performance['during_under_streaks'].append(value)
+            else:
+                streak_performance['non_streak'].append(value)
+            in_streak = True
+            streak_type_temp = 'UNDER'
+        else:
+            streak_performance['non_streak'].append(value)
+            in_streak = False
+    
+    # Calculate averages during different periods
+    avg_during_over = sum(streak_performance['during_over_streaks']) / len(streak_performance['during_over_streaks']) if streak_performance['during_over_streaks'] else 0
+    avg_during_under = sum(streak_performance['during_under_streaks']) / len(streak_performance['during_under_streaks']) if streak_performance['during_under_streaks'] else 0
+    avg_overall = sum(stat_values) / len(stat_values) if stat_values else 0
+    
+    # REGRESSION WARNING INDICATORS
+    regression_warnings = []
+    regression_risk = 'low'  # low, medium, high
+    regression_score = 0  # 0-100
+    
+    if basic_streak['active']:
+        streak_count = basic_streak['streak_count']
+        streak_type = basic_streak['streak_type']
+        
+        # 1. Streak length vs historical average
+        historical_avg = avg_over_streak if streak_type == 'OVER' else avg_under_streak
+        if historical_avg > 0 and streak_count > historical_avg * 1.5:
+            regression_warnings.append(f'Streak ({streak_count}) exceeds historical avg ({historical_avg:.1f}) by 50%+')
+            regression_score += 25
+        
+        # 2. Approaching historical max
+        historical_max = max_over_streak if streak_type == 'OVER' else max_under_streak
+        if historical_max > 0 and streak_count >= historical_max - 1:
+            regression_warnings.append(f'Approaching historical max streak ({historical_max})')
+            regression_score += 20
+        
+        # 3. Recent values trending toward line (momentum fading)
+        recent_3 = stat_values[:3] if len(stat_values) >= 3 else stat_values
+        if len(recent_3) >= 3:
+            if streak_type == 'OVER':
+                # Check if values getting closer to line
+                margins = [v - line for v in recent_3]
+                if margins[0] < margins[1] < margins[2]:  # Decreasing margin
+                    regression_warnings.append('Margin over line shrinking (momentum fading)')
+                    regression_score += 20
+            else:  # UNDER
+                margins = [line - v for v in recent_3]
+                if margins[0] < margins[1] < margins[2]:
+                    regression_warnings.append('Margin under line shrinking (momentum fading)')
+                    regression_score += 20
+        
+        # 4. Performance variance during streak
+        streak_values = stat_values[:streak_count]
+        if len(streak_values) >= 2:
+            streak_std = (sum((v - sum(streak_values)/len(streak_values))**2 for v in streak_values) / len(streak_values)) ** 0.5
+            streak_cv = (streak_std / (sum(streak_values)/len(streak_values))) * 100 if sum(streak_values) > 0 else 0
+            if streak_cv > 25:
+                regression_warnings.append(f'High variance during streak (CV: {streak_cv:.1f}%)')
+                regression_score += 15
+        
+        # 5. Mean reversion indicator
+        if streak_type == 'OVER' and avg_during_over > avg_overall * 1.15:
+            regression_warnings.append(f'Performing 15%+ above season avg during streak')
+            regression_score += 15
+        elif streak_type == 'UNDER' and avg_during_under < avg_overall * 0.85:
+            regression_warnings.append(f'Performing 15%+ below season avg during streak')
+            regression_score += 15
+        
+        # 6. Long streak warning (generic)
+        if streak_count >= 5:
+            regression_warnings.append(f'{streak_count}-game streaks are statistically rare - regression likely')
+            regression_score += 10
+        elif streak_count >= 4:
+            regression_warnings.append(f'Extended {streak_count}-game streak - monitor closely')
+            regression_score += 5
+        
+        # Determine risk level
+        if regression_score >= 50:
+            regression_risk = 'high'
+        elif regression_score >= 25:
+            regression_risk = 'medium'
+        else:
+            regression_risk = 'low'
+    
+    # LINE CORRELATION ANALYSIS
+    line_correlation = {
+        'current_line': line,
+        'avg_vs_line': round(avg_overall - line, 1),
+        'hit_rate_over': 0,
+        'hit_rate_under': 0,
+        'line_accuracy': 'neutral'
+    }
+    
+    over_hits = sum(1 for v in stat_values if v > line)
+    under_hits = sum(1 for v in stat_values if v < line)
+    total_games = len(stat_values)
+    
+    if total_games > 0:
+        line_correlation['hit_rate_over'] = round((over_hits / total_games) * 100, 1)
+        line_correlation['hit_rate_under'] = round((under_hits / total_games) * 100, 1)
+        
+        # Determine if line is accurate
+        if line_correlation['hit_rate_over'] >= 65:
+            line_correlation['line_accuracy'] = 'line_too_low'
+            line_correlation['line_suggestion'] = f'Line should be ~{avg_overall:.1f}'
+        elif line_correlation['hit_rate_under'] >= 65:
+            line_correlation['line_accuracy'] = 'line_too_high'
+            line_correlation['line_suggestion'] = f'Line should be ~{avg_overall:.1f}'
+        else:
+            line_correlation['line_accuracy'] = 'accurate'
+    
+    # STREAK EV ADJUSTMENT
+    ev_adjustment = 0
+    ev_reasoning = []
+    
+    if basic_streak['active']:
+        streak_count = basic_streak['streak_count']
+        streak_type = basic_streak['streak_type']
+        
+        # Positive EV factors
+        if streak_count >= 3 and regression_risk == 'low':
+            ev_adjustment += 5
+            ev_reasoning.append(f'+5% EV: Strong {streak_count}-game streak with low regression risk')
+        
+        if line_correlation['line_accuracy'] != 'accurate':
+            ev_adjustment += 3
+            ev_reasoning.append(f'+3% EV: Line appears mispriced ({line_correlation["line_accuracy"]})')
+        
+        # Negative EV factors (regression risk)
+        if regression_risk == 'high':
+            ev_adjustment -= 8
+            ev_reasoning.append(f'-8% EV: High regression risk after {streak_count} games')
+        elif regression_risk == 'medium':
+            ev_adjustment -= 4
+            ev_reasoning.append(f'-4% EV: Medium regression risk')
+        
+        # Momentum factor
+        if len(stat_values) >= 3:
+            recent_avg = sum(stat_values[:3]) / 3
+            older_avg = sum(stat_values[3:6]) / 3 if len(stat_values) >= 6 else avg_overall
+            
+            if streak_type == 'OVER' and recent_avg > older_avg:
+                ev_adjustment += 2
+                ev_reasoning.append(f'+2% EV: Performance trending up ({recent_avg:.1f} vs {older_avg:.1f})')
+            elif streak_type == 'UNDER' and recent_avg < older_avg:
+                ev_adjustment += 2
+                ev_reasoning.append(f'+2% EV: Performance trending down as expected')
+            elif streak_type == 'OVER' and recent_avg < older_avg:
+                ev_adjustment -= 3
+                ev_reasoning.append(f'-3% EV: Performance fading despite OVER streak')
+            elif streak_type == 'UNDER' and recent_avg > older_avg:
+                ev_adjustment -= 3
+                ev_reasoning.append(f'-3% EV: Performance improving despite UNDER streak')
+    
+    return {
+        'streak_count': basic_streak['streak_count'],
+        'streak_type': basic_streak['streak_type'],
+        'active': basic_streak['active'],
+        'analytics': {
+            'historical_patterns': {
+                'avg_over_streak_length': round(avg_over_streak, 1),
+                'avg_under_streak_length': round(avg_under_streak, 1),
+                'max_over_streak': max_over_streak,
+                'max_under_streak': max_under_streak,
+                'total_streaks_found': len(all_streaks)
+            },
+            'performance_during_streaks': {
+                'avg_during_over_streaks': round(avg_during_over, 1),
+                'avg_during_under_streaks': round(avg_during_under, 1),
+                'overall_avg': round(avg_overall, 1),
+                'games_analyzed': len(stat_values)
+            },
+            'regression': {
+                'risk_level': regression_risk,
+                'risk_score': min(100, regression_score),
+                'warnings': regression_warnings
+            },
+            'line_correlation': line_correlation,
+            'ev_adjustment': {
+                'adjustment_pct': ev_adjustment,
+                'reasoning': ev_reasoning
+            }
+        }
+    }
+
 def get_all_active_players():
     """
     Get all currently active NBA players.
@@ -1174,10 +1452,12 @@ def check_for_edges(projections, threshold=2.0, stat_type='PTS', season='2023-24
                     'stat_type': stat_type
                 }
                 
-                # Add streak info if requested
+                # Add streak info if requested (use enhanced analytics)
+                streak_info = None
                 if include_streaks:
-                    streak_info = calculate_streak(player_name, line, stat_type, season, min_streak)
-                    edge_data['streak'] = streak_info
+                    enhanced_streak = calculate_enhanced_streak_analytics(player_name, line, stat_type, season, min_streak)
+                    edge_data['streak'] = enhanced_streak
+                    streak_info = enhanced_streak  # For backwards compatibility
                 
                 # Add performance factors
                 if factors:
@@ -1200,19 +1480,20 @@ def check_for_edges(projections, threshold=2.0, stat_type='PTS', season='2023-24
                 
                 edges.append(edge_data)
         
-        # Check for streaks (even if not an edge)
+        # Check for streaks (even if not an edge) - use enhanced analytics
         if include_streaks:
-            streak_info = calculate_streak(player_name, line, stat_type, season, min_streak)
-            if streak_info['active']:
+            enhanced_streak = calculate_enhanced_streak_analytics(player_name, line, stat_type, season, min_streak)
+            if enhanced_streak['active']:
                 # Get average for streak display
                 avg = fetch_recent_stats(player_name, stat_type=stat_type, season=season)
                 streak_data = {
                     'player': player_name,
                     'line': line,
                     'average': round(avg, 1) if avg else None,
-                    'streak_count': streak_info['streak_count'],
-                    'streak_type': streak_info['streak_type'],
-                    'stat_type': stat_type
+                    'streak_count': enhanced_streak['streak_count'],
+                    'streak_type': enhanced_streak['streak_type'],
+                    'stat_type': stat_type,
+                    'streak_analytics': enhanced_streak.get('analytics')  # Include full analytics
                 }
                 
                 # Add performance factors
@@ -1231,8 +1512,8 @@ def check_for_edges(projections, threshold=2.0, stat_type='PTS', season='2023-24
                     'line': line,
                     'average': round(avg, 1) if avg else 0,
                     'difference': abs(avg - line) if avg else 0,
-                    'recommendation': streak_info['streak_type']
-                }, factors, streak_info)
+                    'recommendation': enhanced_streak['streak_type']
+                }, factors, enhanced_streak)
                 streak_data['oracle'] = oracle_verdict
                 
                 # Only add if not already in edges (avoid duplicates)

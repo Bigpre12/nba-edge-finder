@@ -79,11 +79,26 @@ def calculate_confidence_score(probability: float, ev_data: Dict, edge_data: Dic
     # Normalize: 0-15% edge maps to 0-20 points
     edge_score = min(20, max(0, market_edge * 1.33)) if market_edge > 0 else 0
     
-    # Streak bonus (weighted 10%)
+    # Streak bonus (weighted 10%) - enhanced with analytics
     streak_score = 0
+    streak_ev_adjustment = 0
     if streak_info and streak_info.get('active'):
         streak_count = streak_info.get('streak_count', 0)
         streak_score = min(10, streak_count * 2.5)  # 2-4 streak = 5-10 points
+        
+        # Apply streak EV adjustment from enhanced analytics
+        if streak_info.get('analytics') and streak_info['analytics'].get('ev_adjustment'):
+            streak_ev_adjustment = streak_info['analytics']['ev_adjustment'].get('adjustment_pct', 0)
+            # Convert EV adjustment to score contribution (max 5 points either way)
+            streak_score += max(-5, min(5, streak_ev_adjustment / 2))
+        
+        # Reduce score for high regression risk
+        if streak_info.get('analytics') and streak_info['analytics'].get('regression'):
+            regression_risk = streak_info['analytics']['regression'].get('risk_level', 'low')
+            if regression_risk == 'high':
+                streak_score = max(0, streak_score - 5)
+            elif regression_risk == 'medium':
+                streak_score = max(0, streak_score - 2)
     
     # Factors bonus (weighted 5%)
     factor_score = 0
