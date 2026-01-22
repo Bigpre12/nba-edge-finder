@@ -248,7 +248,15 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
         try:
             # NBA API doesn't support timeout parameter directly
             career_stats = playercareerstats.PlayerCareerStats(player_id=player_id)
-            df = career_stats.get_data_frames()[0]
+            data_frames = career_stats.get_data_frames()
+            
+            # Check if we got any data frames
+            if not data_frames or len(data_frames) == 0:
+                player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
+                # This is expected for players with no career stats (very new players, etc.)
+                return None
+            
+            df = data_frames[0]
             break  # Success, exit retry loop
         except (Timeout, ConnectionError, RequestException) as e:
             if attempt < max_retries - 1:
