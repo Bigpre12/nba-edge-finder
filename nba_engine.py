@@ -944,10 +944,12 @@ def identify_statistical_beneficiary(edge_data, stat_type='PTS', season='2023-24
     if opponent_team:
         try:
             matchup_analysis = analyze_player_vs_team_matchup(player_name, opponent_team, stat_type, season)
-            defensive_stats = get_team_defensive_ranking(opponent_team, stat_type, season)
+            team_stats = get_team_defensive_ranking(opponent_team, stat_type, season)
+            defensive_stats = team_stats  # Keep for backward compatibility
             
-            if defensive_stats and defensive_stats.get('is_weak'):
-                mismatch_description = f"Facing {opponent_team} - {defensive_stats.get('ranking_estimate', 'weak')} defense allowing {defensive_stats.get('avg_allowed', 0):.1f} {stat_type}/game"
+            if team_stats and team_stats.get('is_weak'):
+                stat_display = team_stats.get('stat_type', stat_type)
+                mismatch_description = f"Facing {opponent_team} - {team_stats.get('ranking_estimate', 'weak')} defense allowing {team_stats.get('avg_allowed', 0):.1f} {stat_display}/game"
             elif matchup_analysis and matchup_analysis.get('advantage', 0) > 2:
                 mismatch_description = f"Historical advantage vs {opponent_team}: +{matchup_analysis['advantage']:.1f} {stat_type} above average"
             else:
