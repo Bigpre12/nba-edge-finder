@@ -141,6 +141,22 @@ async def get_player(player_id: int, request: Request):
     raise HTTPException(status_code=404, detail="Player not found")
 
 
+@app.get("/api/index")
+async def get_index(request: Request):
+    """Get game index."""
+    data = load_json_file("index.json")
+    return json_response_with_etag(data, request)
+
+
+@app.get("/api/game/{game_id}")
+async def get_game(game_id: str, request: Request):
+    """Get single game data."""
+    data = load_json_file(f"games/{game_id}.json")
+    if "error" in data:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return json_response_with_etag(data, request)
+
+
 @app.get("/api/status")
 async def get_status():
     """Health check with data freshness."""
@@ -161,13 +177,22 @@ async def health():
 
 # === Static Files ===
 
-# Serve index.html at root
+# Serve index.html at root (props view)
 @app.get("/")
 async def root():
     index_path = STATIC_DIR / "index.html"
     if index_path.exists():
         return FileResponse(index_path)
     return {"message": "NBA Edge Finder API", "docs": "/api/status"}
+
+
+# Serve games.html (game-based view)
+@app.get("/games")
+async def games_page():
+    games_path = STATIC_DIR / "games.html"
+    if games_path.exists():
+        return FileResponse(games_path)
+    raise HTTPException(status_code=404, detail="Games page not found")
 
 
 # Mount static files (JS, CSS)

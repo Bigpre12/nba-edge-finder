@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Edge Tracker — Live</title>
+<style>
+  :root{--bg:#0a0a0a;--surface:#111;--border:#222;--text:#e0e0e0;--muted:#888;--gold:#ffd700;--green:#27ae60;--red:#e74c3c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5;background:var(--bg);color:var(--text);padding:16px;min-height:100vh}
+  h1{color:var(--gold);font-size:1.8rem;margin-bottom:4px}
+  h2{color:var(--gold);font-size:1.2rem;margin:16px 0 8px}
+  h3{color:var(--text);font-size:1rem;margin:12px 0 6px;border-bottom:1px solid var(--border);padding-bottom:4px}
+  
+  #proof{color:var(--muted);font-size:0.85rem;margin-bottom:16px}
+  
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{padding:10px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;font-size:0.9rem;transition:all 0.2s}
+  .tab:hover{border-color:var(--gold);color:var(--text)}
+  .tab:focus{outline:2px solid var(--gold);outline-offset:2px}
+  .tab[aria-selected="true"]{border-color:var(--gold);background:rgba(255,215,0,0.1);color:var(--gold);font-weight:600}
+  
+  .spinner{display:inline-block;width:18px;height:18px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  
+  .card{border:1px solid var(--border);padding:14px;border-radius:8px;margin-bottom:10px;background:var(--surface)}
+  .muted{color:var(--muted);font-size:0.9rem}
+  
+  /* Picks */
+  .picks-list{margin:8px 0}
+  .pick-item{display:flex;gap:12px;align-items:center;padding:8px 12px;background:var(--bg);border-radius:6px;margin-bottom:6px}
+  .pick-market{color:var(--muted);min-width:70px;font-size:0.85rem}
+  .pick-selection{color:var(--text);font-weight:600;flex:1}
+  .pick-odds{color:var(--muted);font-size:0.9rem}
+  .pick-ev{color:var(--green);font-weight:600}
+  .pick-ev.negative{color:var(--red)}
+  .pick-conf{background:rgba(255,215,0,0.15);color:var(--gold);padding:2px 8px;border-radius:4px;font-size:0.85rem;font-weight:600}
+  
+  /* Props */
+  .props-list{margin:8px 0}
+  .prop-item{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+  .prop-item:last-child{border-bottom:none}
+  .prop-player{color:var(--gold);font-weight:600;min-width:140px}
+  .prop-type{color:var(--muted);min-width:60px;font-size:0.85rem}
+  .prop-line{color:var(--text);font-weight:600;min-width:50px}
+  .prop-pick{padding:3px 8px;border-radius:4px;font-weight:600;font-size:0.8rem}
+  .prop-pick.over{background:rgba(39,174,96,0.2);color:var(--green)}
+  .prop-pick.under{background:rgba(231,76,60,0.2);color:var(--red)}
+  .prop-prob{font-weight:600;min-width:45px}
+  .prop-prob.high{color:var(--green)}
+  .prop-prob.mid{color:var(--gold)}
+  .prop-prob.low{color:var(--muted)}
+  .prop-streak{color:var(--muted);font-size:0.8rem}
+  .prop-streak.hot{color:var(--green)}
+  
+  /* ROI */
+  .roi{margin-top:12px;padding:10px;background:var(--bg);border-radius:6px;display:flex;justify-content:space-between}
+  .roi-label{color:var(--muted)}
+  .roi-value{font-weight:700}
+  .roi-value.positive{color:var(--green)}
+  .roi-value.negative{color:var(--red)}
+  
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--border);text-align:center;color:var(--muted);font-size:0.8rem}
+  
+  @media(max-width:600px){
+    .tabs{flex-direction:column}
+    .tab{width:100%}
+    .prop-item{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<h1>Edge Tracker — Live</h1>
+<div id="proof" class="muted">Loading summary...</div>
+
+<div id="tabs" class="tabs" role="tablist" aria-label="Games"></div>
+
+<main id="panel" tabindex="0" role="region" aria-live="polite">
+  <div id="panel-content" class="card">Select a game</div>
+</main>
+
+<footer>
+  Data updates every 15 minutes via GitHub Actions<br>
+  <small>Arrow keys to switch games, auto-refreshes every 15s</small>
+</footer>
+
+<script>
+const CONFIG = {
+  INDEX_URL: '/data/index.json',
+  GAME_BASE: '/data/games/',
+  CACHE_TTL_MS: 60000,
+  POLL_INTERVAL_MS: 15000
+};
+
+const state = {
+  index: null,
+  cache: new Map(),
+  currentAbort: null,
+  currentGameId: null,
+  pollTimer: null
+};
+
+function pretty(n) { return typeof n === 'number' ? n.toFixed(1) : n; }
+
+function cacheStore(key, data) {
+  const item = { ts: Date.now(), data };
+  state.cache.set(key, item);
+  try { localStorage.setItem('game_' + key, JSON.stringify(item)); } catch(e) {}
+}
+
+function cacheLoad(key) {
+  const mem = state.cache.get(key);
+  if (mem && (Date.now() - mem.ts) < CONFIG.CACHE_TTL_MS) return mem.data;
+  try {
+    const raw = localStorage.getItem('game_' + key);
+    if (raw) {
+      const item = JSON.parse(raw);
+      if ((Date.now() - item.ts) < CONFIG.CACHE_TTL_MS) {
+        state.cache.set(key, item);
+        return item.data;
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function loadIndex() {
+  try {
+    const res = await fetch(CONFIG.INDEX_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const idx = await res.json();
+    state.index = idx;
+    document.getElementById('proof').textContent = idx.summary || 'Loaded';
+    renderTabs();
+  } catch(e) {
+    console.error('Index load error:', e);
+    document.getElementById('proof').textContent = 'Unable to load games';
+  }
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  (state.index.games || []).forEach((g, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', 'false');
+    btn.id = 'tab-' + g.id;
+    btn.dataset.gameId = g.id;
+    btn.textContent = `${g.away} @ ${g.home} • ${g.start_time || ''}`;
+    btn.addEventListener('click', onTabClick);
+    btn.addEventListener('keydown', onTabKeydown);
+    btn.tabIndex = i === 0 ? 0 : -1;
+    tabs.appendChild(btn);
+  });
+}
+
+function onTabKeydown(e) {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const tabs = Array.from(document.querySelectorAll('[role=tab]'));
+    const idx = tabs.indexOf(e.target);
+    const next = e.key === 'ArrowRight' ? tabs[idx + 1] || tabs[0] : tabs[idx - 1] || tabs[tabs.length - 1];
+    next.focus();
+    next.click();
+    e.preventDefault();
+  }
+}
+
+function setSelectedTab(gameId) {
+  document.querySelectorAll('[role=tab]').forEach(t => {
+    const isSelected = t.dataset.gameId === String(gameId);
+    t.setAttribute('aria-selected', isSelected);
+    t.tabIndex = isSelected ? 0 : -1;
+  });
+}
+
+function showLoading() {
+  document.getElementById('panel-content').innerHTML = '<div class="muted"><span class="spinner"></span> Loading game...</div>';
+}
+
+function renderGame(game) {
+  const el = document.getElementById('panel-content');
+  const html = [];
+  
+  html.push(`<h2>${game.away} @ ${game.home}</h2>`);
+  html.push(`<div class="muted">Updated: ${new Date(game.updated_at).toLocaleString()}</div>`);
+  
+  // Picks
+  html.push('<h3>Best Bets</h3>');
+  if (game.picks && game.picks.length) {
+    html.push('<div class="picks-list">');
+    game.picks.forEach(p => {
+      const evClass = p.ev >= 0 ? '' : 'negative';
+      html.push(`
+        <div class="pick-item">
+          <span class="pick-market">${p.market}</span>
+          <span class="pick-selection">${p.selection}</span>
+          <span class="pick-odds">${p.odds > 0 ? '+' : ''}${p.odds}</span>
+          <span class="pick-ev ${evClass}">EV ${pretty(p.ev)}%</span>
+          <span class="pick-conf">${p.confidence}%</span>
+        </div>
+      `);
+    });
+    html.push('</div>');
+  } else {
+    html.push('<div class="muted">No picks for this game</div>');
+  }
+  
+  // Props
+  html.push('<h3>Player Props</h3>');
+  if (game.props && game.props.length) {
+    html.push('<div class="props-list">');
+    game.props.forEach(pp => {
+      const probClass = pp.prob >= 70 ? 'high' : pp.prob >= 60 ? 'mid' : 'low';
+      const streakClass = pp.streak >= 3 ? 'hot' : '';
+      html.push(`
+        <div class="prop-item">
+          <span class="prop-player">${pp.player}</span>
+          <span class="prop-type">${pp.prop}</span>
+          <span class="prop-line">${pp.line}</span>
+          <span class="prop-pick ${pp.pick.toLowerCase()}">${pp.pick}</span>
+          <span class="prop-prob ${probClass}">${pp.prob}%</span>
+          ${pp.streak ? `<span class="prop-streak ${streakClass}">🔥${pp.streak}</span>` : ''}
+        </div>
+      `);
+    });
+    html.push('</div>');
+  } else {
+    html.push('<div class="muted">No props for this game</div>');
+  }
+  
+  // ROI
+  if (game.roi_30d !== undefined) {
+    const roiClass = game.roi_30d >= 0 ? 'positive' : 'negative';
+    html.push(`
+      <div class="roi">
+        <span class="roi-label">30-Day ROI</span>
+        <span class="roi-value ${roiClass}">${game.roi_30d >= 0 ? '+' : ''}${pretty(game.roi_30d)}%</span>
+      </div>
+    `);
+  }
+  
+  el.innerHTML = html.join('');
+}
+
+function abortExisting() {
+  if (state.currentAbort) {
+    state.currentAbort.abort();
+    state.currentAbort = null;
+  }
+}
+
+async function loadGame(gameId, { force = false } = {}) {
+  setSelectedTab(gameId);
+  state.currentGameId = gameId;
+  
+  const cached = cacheLoad(gameId);
+  if (cached && !force) {
+    renderGame(cached);
+  } else {
+    showLoading();
+  }
+  
+  abortExisting();
+  const controller = new AbortController();
+  state.currentAbort = controller;
+  
+  try {
+    const url = `${CONFIG.GAME_BASE}${encodeURIComponent(gameId)}.json`;
+    const res = await fetch(url, { signal: controller.signal, cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const game = await res.json();
+    cacheStore(gameId, game);
+    
+    if (state.currentAbort === controller) {
+      renderGame(game);
+      state.currentAbort = null;
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('Fetch aborted');
+      return;
+    }
+    console.error('Load game error:', err);
+    if (!cached) {
+      document.getElementById('panel-content').innerHTML = `<div class="muted">Unable to load game data: ${err.message}</div>`;
+    }
+  }
+}
+
+function startPoll() {
+  stopPoll();
+  state.pollTimer = setInterval(() => {
+    if (!document.hidden && state.currentGameId) {
+      console.log('Auto-refresh...');
+      loadGame(state.currentGameId, { force: true });
+    }
+  }, CONFIG.POLL_INTERVAL_MS);
+}
+
+function stopPoll() {
+  if (state.pollTimer) {
+    clearInterval(state.pollTimer);
+    state.pollTimer = null;
+  }
+}
+
+function onTabClick(e) {
+  const id = e.currentTarget.dataset.gameId;
+  loadGame(id);
+  startPoll();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopPoll();
+  else if (state.currentGameId) {
+    startPoll();
+    loadGame(state.currentGameId, { force: true });
+  }
+});
+
+(async function init() {
+  await loadIndex();
+  const first = document.querySelector('[role=tab]');
+  if (first) first.click();
+})();
+</script>
+</body>
+</html>
