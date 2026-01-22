@@ -104,11 +104,13 @@ def save_projections(projections):
 MARKET_PROJECTIONS = load_projections()
 print(f"Startup: Loaded {len(MARKET_PROJECTIONS)} players from projections file")
 
-# If no players loaded, start background loading immediately on startup
+# If no players loaded, note that background load will start on first request
+# Don't start loading here - let the index route handle it to avoid duplicate loads
+# This prevents memory issues and ensures proper coordination
 if len(MARKET_PROJECTIONS) == 0:
     print("INFO: No players found in projections file - background load will start on first request")
-    # Don't start loading here - let the index route handle it to avoid duplicate loads
-    # This prevents memory issues and ensures proper coordination
+else:
+    print(f"SUCCESS: App ready with {len(MARKET_PROJECTIONS)} players loaded!")
         try:
             from nba_engine import get_all_active_players, get_season_average
             
