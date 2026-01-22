@@ -339,7 +339,7 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         max_players = 50
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
-            print(f"⚠️ Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout")
+            print(f"WARNING: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout")
         else:
             projections_to_check = MARKET_PROJECTIONS
         
@@ -458,13 +458,13 @@ def index():
         should_trigger_load = len(MARKET_PROJECTIONS) == 0
         
         if should_trigger_load:
-            print(f"⚠️ Only {len(MARKET_PROJECTIONS)} players loaded. Triggering background load...")
+            print(f"WARNING: Only {len(MARKET_PROJECTIONS)} players loaded. Triggering background load...")
             import threading
             import time
             def background_load():
                 global MARKET_PROJECTIONS
                 print("=" * 60)
-                print("🔄 AUTO-LOAD: Starting background load of relevant players...")
+                print("AUTO-LOAD: Starting background load of relevant players...")
                 print("=" * 60)
                 try:
                     # SIMPLIFIED: Just load top 50 active players directly (skip filtering)
@@ -688,7 +688,7 @@ def api_edges():
         # Log error but don't crash - return empty data instead
         error_type = type(e).__name__
         error_msg = str(e)
-        print(f"⚠️ Error in get_edges_data: {error_type}: {error_msg}")
+        print(f"WARNING: Error in get_edges_data: {error_type}: {error_msg}")
         # Only print full traceback for unexpected errors
         if error_type not in ['KeyError', 'AttributeError', 'ValueError', 'TypeError']:
             import traceback
