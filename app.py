@@ -944,43 +944,6 @@ def api_glitched_scan_status():
             'error': str(e)
             }), 500
 
-@app.route('/api/glitched-props/scan', methods=['POST'])
-@requires_auth
-def api_trigger_glitched_scan():
-    """Manually trigger a glitched props scan."""
-    try:
-        print(f"[{datetime.now()}] Manual glitched props scan triggered...")
-        found_glitches = scan_active_players_for_glitches()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Scan complete. Found {len(found_glitches)} new glitched props.',
-            'found_count': len(found_glitches),
-            'props': get_glitched_props(),
-            'scan_status': get_scan_status()
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/glitched-props/status', methods=['GET'])
-@requires_auth
-def api_glitched_scan_status():
-    """Get the status of the automated glitched props scanning system."""
-    try:
-        status = get_scan_status()
-        return jsonify({
-            'success': True,
-            'status': status
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
 if __name__ == '__main__':
     # Development mode
     try:
