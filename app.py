@@ -624,6 +624,15 @@ def index():
             individual_stats = {'PTS': stat_categories['PTS']}
             combination_stats = {}
         
+        # Get glitched props with error handling
+        try:
+            glitched_props = get_glitched_props()
+        except Exception as e:
+            print(f"Error loading glitched props: {e}")
+            import traceback
+            traceback.print_exc()
+            glitched_props = []
+        
         return render_template('index.html', 
                              edges=edges, 
                              streaks=streaks, 
@@ -635,7 +644,7 @@ def index():
                              individual_stats=individual_stats,
                              combination_stats=combination_stats,
                              current_stat_type=stat_type,
-                             glitched_props=get_glitched_props())
+                             glitched_props=glitched_props)
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
