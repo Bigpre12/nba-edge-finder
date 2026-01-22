@@ -721,9 +721,9 @@
                                         : '';
                                     
                                     return `
-                                    <div class="oracle-card ${edge.recommendation.toLowerCase()}">
+                                    <div class="oracle-card ${edge.recommendation ? edge.recommendation.toLowerCase() : ''}">
                                         <div class="oracle-header-row">
-                                            <div class="oracle-player">${edge.player}</div>
+                                            <div class="oracle-player">${edge.player || 'Unknown Player'}</div>
                                             ${edge.ev ? `
                                             <div class="ev-badge ${edge.ev.is_positive_ev ? 'positive-ev' : 'negative-ev'}">
                                                 EV: $${edge.ev.ev.toFixed(2)}
