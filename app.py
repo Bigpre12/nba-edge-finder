@@ -335,9 +335,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         track_line_changes(MARKET_PROJECTIONS)
         
         # Limit number of players to process to prevent timeout and memory issues
-        # Process max 5 players at a time for faster response and lower memory usage
+        # Process max 3 players at a time for faster response and lower memory usage
         # This ensures the request completes within the timeout window and doesn't use too much memory
-        max_players = 5
+        max_players = 3
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
             print(f"WARNING: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout")
@@ -347,9 +347,32 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         try:
             # Disable expensive operations to prevent timeout
             # include_factors=False reduces API calls significantly
-            result = check_for_edges(projections_to_check, threshold=2.0, stat_type=stat_type, include_streaks=False, min_streak=2, include_factors=False)
-            all_edges = result.get('edges', []) if result else []
-            streaks = result.get('streaks', []) if result else []
+            # include_streaks=False skips streak calculations
+            # Use a timeout wrapper to prevent hanging
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Edge calculation timed out")
+            
+            # Set a 5-minute timeout for edge calculation
+            # This ensures we don't exceed the 10-minute gunicorn timeout
+            try:
+                # For Unix systems, use signal
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(300)  # 5 minutes
+            except (AttributeError, OSError):
+                # Windows doesn't support SIGALRM, skip timeout
+                pass
+            
+            try:
+                result = check_for_edges(projections_to_check, threshold=2.0, stat_type=stat_type, include_streaks=False, min_streak=2, include_factors=False)
+                all_edges = result.get('edges', []) if result else []
+                streaks = result.get('streaks', []) if result else []
+            finally:
+                try:
+                    signal.alarm(0)  # Cancel timeout
+                except (AttributeError, OSError):
+                    pass
         except Exception as e:
             print(f"Error in check_for_edges: {e}")
             import traceback
