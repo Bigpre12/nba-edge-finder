@@ -280,7 +280,12 @@ def init_scheduler():
                     
                     print(f"Daily update complete! Loaded {len(MARKET_PROJECTIONS)} active players.")
                 except Exception as e:
-                    print(f"Error in daily update: {e}")
+                    print(f"ERROR: Exception in daily_update_job: {e}", file=sys.stderr)
+                    import traceback
+                    error_trace = traceback.format_exc()
+                    print(error_trace, file=sys.stderr)
+                    print(f"ERROR: Exception in daily_update_job: {e}")
+                    traceback.print_exc()
             
             def glitched_props_scan_job():
                 """Run glitched props scan every 15 minutes (24/7)."""
@@ -292,8 +297,11 @@ def init_scheduler():
                     else:
                         print("No new glitched props found this scan")
                 except Exception as e:
-                    print(f"Error in glitched props scan job: {e}")
+                    print(f"ERROR: Exception in glitched_props_scan_job: {e}", file=sys.stderr)
                     import traceback
+                    error_trace = traceback.format_exc()
+                    print(error_trace, file=sys.stderr)
+                    print(f"ERROR: Exception in glitched_props_scan_job: {e}")
                     traceback.print_exc()
             
             # Schedule daily update at 8am
@@ -543,10 +551,15 @@ def index():
             import threading
             import time
             def background_load():
+                """Background thread to load players - wrapped in comprehensive error handling."""
                 global MARKET_PROJECTIONS
-                print("=" * 60)
-                print("AUTO-LOAD: Starting background load of relevant players...")
-                print("=" * 60)
+                try:
+                    print("=" * 60)
+                    print("AUTO-LOAD: Starting background load of relevant players...")
+                    print("=" * 60)
+                except Exception as e:
+                    print(f"ERROR: Failed to start background load logging: {e}", file=sys.stderr)
+                
                 try:
                     # SIMPLIFIED: Just load top 50 active players directly (skip filtering)
                     # This is more reliable and faster
@@ -557,7 +570,10 @@ def index():
                     
                     if not all_players:
                         print("ERROR: No active players available from NBA API")
-                        app._loading_players = False
+                        try:
+                            app._loading_players = False
+                        except:
+                            pass
                         return
                     
                     # Load top 30 players to reduce memory usage (reduced from 50)
@@ -623,15 +639,21 @@ def index():
                         print("   This might be due to NBA API rate limits or network issues.")
                         print(f"   Current projections still have {len(MARKET_PROJECTIONS)} players")
                 except Exception as e:
-                    print(f"ERROR: Error auto-loading players: {e}")
+                    print(f"ERROR: Exception in background_load thread: {e}", file=sys.stderr)
                     import traceback
+                    error_trace = traceback.format_exc()
+                    print(error_trace, file=sys.stderr)
+                    print(f"ERROR: Exception in background_load thread: {e}")
                     traceback.print_exc()
                 finally:
-                    # Reset flag when done
-                    app._loading_players = False
-                    print("=" * 60)
-                    print("Background loading thread completed.")
-                    print("=" * 60)
+                    # Reset flag when done - wrap in try/except to prevent crashes
+                    try:
+                        app._loading_players = False
+                        print("=" * 60)
+                        print("Background loading thread completed.")
+                        print("=" * 60)
+                    except Exception as e:
+                        print(f"ERROR: Failed to reset loading flag: {e}", file=sys.stderr)
             
             # Check if a load is already in progress (simple flag check)
             if not hasattr(app, '_loading_players'):
@@ -908,8 +930,11 @@ def api_load_all_players():
                 else:
                     print(f"WARNING: No players loaded for {stat_type}")
             except Exception as e:
-                print(f"ERROR: Error loading players: {e}")
+                print(f"ERROR: Exception in background_load thread: {e}", file=sys.stderr)
                 import traceback
+                error_trace = traceback.format_exc()
+                print(error_trace, file=sys.stderr)
+                print(f"ERROR: Exception in background_load thread: {e}")
                 traceback.print_exc()
         
         # Start background thread
