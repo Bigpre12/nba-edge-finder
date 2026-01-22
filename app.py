@@ -357,25 +357,43 @@ def index():
             import threading
             import time
             def background_load():
-                print("Auto-loading relevant players in background (hot streaks, trends, role players)...")
+                print("=" * 60)
+                print("🔄 AUTO-LOAD: Starting background load of relevant players...")
+                print("=" * 60)
                 try:
                     from glitched_props_scanner import get_relevant_players_for_today
                     from nba_engine import get_season_average
                     
                     # Get relevant players (same filtering as glitched props scanner)
+                    print("Fetching relevant players list...")
                     relevant_players = get_relevant_players_for_today()
                     
+                    if not relevant_players or len(relevant_players) < 10:
+                        print(f"⚠️ Only {len(relevant_players) if relevant_players else 0} relevant players found")
+                        print("   Falling back to loading top 75 active players...")
+                        # Fallback: load top 75 players by season average
+                        from nba_engine import get_all_active_players
+                        all_players = get_all_active_players()
+                        if all_players:
+                            # Take first 75 players as fallback
+                            relevant_players = [{'player': p, 'player_name': p['full_name']} for p in all_players[:75]]
+                            print(f"   ✅ Using fallback: {len(relevant_players)} players")
+                        else:
+                            print("   ❌ No active players available")
+                            return
+                    
                     if not relevant_players:
-                        print("No relevant players found, falling back to default 3")
+                        print("❌ No players available to load")
                         return
                     
-                    print(f"Generating projections for {len(relevant_players)} relevant players...")
+                    print(f"📊 Generating projections for {len(relevant_players)} players...")
                     
                     # Generate projections only for relevant players
                     new_projections = {}
                     loaded_count = 0
+                    failed_count = 0
                     
-                    for player_data in relevant_players:
+                    for i, player_data in enumerate(relevant_players):
                         player = player_data['player']
                         player_name = player_data['player_name']
                         
@@ -385,6 +403,12 @@ def index():
                             if season_avg and season_avg > 0:
                                 new_projections[player_name] = round(season_avg, 1)
                                 loaded_count += 1
+                            else:
+                                failed_count += 1
+                            
+                            # Progress logging
+                            if (i + 1) % 10 == 0:
+                                print(f"   📈 Progress: {i + 1}/{len(relevant_players)} processed ({loaded_count} loaded, {failed_count} failed)...")
                             
                             # Rate limiting - more conservative to avoid timeouts
                             if loaded_count % 10 == 0:
@@ -395,27 +419,40 @@ def index():
                                 time.sleep(1.5)  # Increased delay between players
                                 
                         except Exception as e:
-                            print(f"Error loading {player_name}: {e}")
+                            failed_count += 1
+                            print(f"   ⚠️ Error loading {player_name}: {e}")
                             continue
                     
+                    # Always ensure default players are included
+                    new_projections = ensure_default_projections(new_projections)
+                    
                     if new_projections and len(new_projections) > 3:
-                        save_projections(new_projections)
-                        global MARKET_PROJECTIONS
-                        MARKET_PROJECTIONS = new_projections
-                        print(f"Successfully loaded {len(MARKET_PROJECTIONS)} relevant players for PTS")
-                        print(f"   Players loaded: {', '.join(list(new_projections.keys())[:10])}...")
+                        if save_projections(new_projections):
+                            global MARKET_PROJECTIONS
+                            MARKET_PROJECTIONS = new_projections
+                            print("=" * 60)
+                            print(f"✅ SUCCESS! Loaded {len(MARKET_PROJECTIONS)} players for PTS")
+                            print(f"   Sample: {', '.join(list(new_projections.keys())[:15])}...")
+                            print("=" * 60)
+                        else:
+                            print("❌ Failed to save projections file")
                     else:
-                        print(f"Warning: Only loaded {len(new_projections) if new_projections else 0} players")
+                        print(f"⚠️ Warning: Only loaded {len(new_projections) if new_projections else 0} players")
                         print("   This might be due to NBA API rate limits or network issues.")
+                        # Still save what we have
+                        if new_projections:
+                            save_projections(new_projections)
+                            global MARKET_PROJECTIONS
+                            MARKET_PROJECTIONS = new_projections
                 except Exception as e:
-                    print(f"Error auto-loading players: {e}")
+                    print(f"❌ Error auto-loading players: {e}")
                     import traceback
                     traceback.print_exc()
             
             # Start in background thread, don't wait
             load_thread = threading.Thread(target=background_load, daemon=True)
             load_thread.start()
-            print(f"Started background thread to load relevant players (hot streaks, trends, role players)...")
+            print(f"🚀 Started background thread to load relevant players...")
         
         # Get selected stat type from request or default to PTS
         stat_type = request.args.get('stat_type', 'PTS')
