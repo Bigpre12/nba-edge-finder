@@ -362,7 +362,11 @@ def index():
         # Auto-load relevant players if projections file is empty or has default values
         # Do this in background to avoid blocking startup
         # Only loads players with hot streaks, positive trends, or role players (not all 500+)
-        if len(MARKET_PROJECTIONS) <= 3:  # Only default players
+        # Check if we need to trigger background loading
+        should_trigger_load = len(MARKET_PROJECTIONS) <= 3
+        
+        if should_trigger_load:
+            print(f"⚠️ Only {len(MARKET_PROJECTIONS)} players loaded. Triggering background load...")
             import threading
             import time
             def background_load():
@@ -456,11 +460,18 @@ def index():
                     print(f"❌ Error auto-loading players: {e}")
                     import traceback
                     traceback.print_exc()
+                finally:
+                    # Reset flag when done
+                    app._loading_players = False
             
-            # Start in background thread, don't wait
-            load_thread = threading.Thread(target=background_load, daemon=True)
-            load_thread.start()
-            print(f"🚀 Started background thread to load relevant players...")
+                # Start in background thread, don't wait
+                load_thread = threading.Thread(target=background_load, daemon=True)
+                load_thread.start()
+                print(f"🚀 Started background thread to load relevant players...")
+                print(f"   Current projections: {len(MARKET_PROJECTIONS)} players")
+                print(f"   Thread will run in background and save to {PROJECTIONS_FILE}")
+            else:
+                print("⏳ Player loading already in progress, skipping duplicate trigger...")
         
         # Get selected stat type from request or default to PTS
         stat_type = request.args.get('stat_type', 'PTS')
