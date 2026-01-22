@@ -113,6 +113,32 @@ except ImportError:
 
 app = Flask(__name__)
 
+# Global exception handler to prevent worker crashes
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Catch all unhandled exceptions to prevent worker crashes."""
+    import traceback
+    error_trace = traceback.format_exc()
+    error_type = type(e).__name__
+    error_msg = str(e)
+    
+    # Log to stderr for Gunicorn to capture
+    print("=" * 80, file=sys.stderr)
+    print(f"UNHANDLED EXCEPTION: {error_type}: {error_msg}", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    print(error_trace, file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    
+    # Also print to stdout
+    print(f"UNHANDLED EXCEPTION: {error_type}: {error_msg}")
+    
+    # Return a safe error response instead of crashing
+    return jsonify({
+        'error': 'Internal server error',
+        'type': error_type,
+        'message': error_msg
+    }), 500
+
 # Enable response compression for faster loading
 try:
     from flask_compress import Compress

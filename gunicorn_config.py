@@ -42,4 +42,25 @@ def on_exit(server, worker):
 
 def worker_abort(worker):
     """Called when a worker receives the SIGABRT signal."""
+    print(f"Worker {worker.pid} aborted")
+
+def worker_int(worker):
+    """Called when a worker receives the SIGINT or SIGQUIT signal."""
+    print(f"Worker {worker.pid} interrupted")
+
+def on_reload(server):
+    """Called to recycle workers during a reload via SIGHUP."""
+    print("Server reloading workers")
+
+def pre_fork(server, worker):
+    """Called just before a worker is forked."""
+    pass
+
+def post_fork(server, worker):
+    """Called just after a worker has been forked."""
+    print(f"Worker {worker.pid} forked")
+
+def pre_exec(server):
+    """Called just before a new master process is forked."""
+    print("Master process forking")
     print(f"Worker {worker.pid} received SIGABRT - aborting gracefully")
