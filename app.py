@@ -52,6 +52,15 @@ DEFAULT_PROJECTIONS = {
     "Stephen Curry": 28.5
 }
 
+def ensure_default_projections(projections):
+    """Ensures default players (LeBron, KD, Steph) are always present in projections."""
+    updated_projections = projections.copy() if projections else {}
+    for player_name, default_line in DEFAULT_PROJECTIONS.items():
+        if player_name not in updated_projections:
+            updated_projections[player_name] = default_line
+            print(f"Added default player {player_name} to projections.")
+    return updated_projections
+
 def load_projections():
     """Load projections from file or return defaults."""
     if os.path.exists(PROJECTIONS_FILE):
@@ -442,7 +451,6 @@ def index():
                         # Still save what we have
                         if new_projections:
                             save_projections(new_projections)
-                            global MARKET_PROJECTIONS
                             MARKET_PROJECTIONS = new_projections
                 except Exception as e:
                     print(f"❌ Error auto-loading players: {e}")
