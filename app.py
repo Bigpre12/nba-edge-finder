@@ -423,11 +423,15 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         streaks.sort(key=lambda x: x.get('streak_count', 0), reverse=True)
         
         # Filter for 70%+ probability props (for high prob section)
-        high_prob_props = filter_high_probability_props(filtered_edges, min_probability=70.0)
+        try:
+            high_prob_props = filter_high_probability_props(filtered_edges, min_probability=70.0) if filtered_edges else []
+        except Exception as e:
+            print(f"Error filtering high prob props: {e}")
+            high_prob_props = []
         
         # Generate parlay recommendations
         try:
-            parlay_recommendations = recommend_parlays(high_prob_props)
+            parlay_recommendations = recommend_parlays(high_prob_props) if high_prob_props else {}
         except Exception as e:
             print(f"Error generating parlay recommendations: {e}")
             parlay_recommendations = {}
