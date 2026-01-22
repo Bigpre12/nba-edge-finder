@@ -126,8 +126,8 @@ if len(MARKET_PROJECTIONS) == 0:
                 print("ERROR: No active players available from NBA API")
                 return
             
-            # Load top 50 players to get started quickly
-            players_to_load = all_players[:50]
+            # Load top 30 players to reduce memory usage (reduced from 50)
+            players_to_load = all_players[:30]
             print(f"Loading projections for {len(players_to_load)} players...")
             
             new_projections = {}
@@ -333,10 +333,10 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         
         track_line_changes(MARKET_PROJECTIONS)
         
-        # Limit number of players to process to prevent timeout
-        # Process max 50 players at a time for faster response (reduced from 100)
-        # This ensures the request completes within the timeout window
-        max_players = 50
+        # Limit number of players to process to prevent timeout and memory issues
+        # Process max 30 players at a time for faster response and lower memory usage
+        # This ensures the request completes within the timeout window and doesn't use too much memory
+        max_players = 30
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
             print(f"WARNING: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout")
@@ -493,8 +493,8 @@ def index():
                         app._loading_players = False
                         return
                     
-                    # Load top 50 players (enough to get started)
-                    players_to_load = all_players[:50]
+                    # Load top 30 players to reduce memory usage (reduced from 50)
+                    players_to_load = all_players[:30]
                     print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}

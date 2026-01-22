@@ -15,6 +15,10 @@ timeout = 300  # Increased to 5 minutes to handle slow API calls and edge calcul
 keepalive = 5
 graceful_timeout = 30
 
+# Memory management - restart workers more frequently to prevent memory leaks
+max_requests = 100  # Reduced from 500 to restart more frequently and free memory
+max_requests_jitter = 10
+
 # Worker lifecycle - restart workers after N requests to prevent memory leaks
 max_requests = 500  # Lower to restart more frequently and prevent issues
 max_requests_jitter = 25
