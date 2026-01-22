@@ -1052,7 +1052,20 @@ def check_for_edges(projections, threshold=2.0, stat_type='PTS', season='2023-24
     edges = []
     streaks = []
     
-    for player_name, line in projections.items():
+    for player_name, pts_line in projections.items():
+        # For non-PTS stats, get the player's season average as the baseline "line"
+        # This makes the comparison meaningful for all stat types
+        if stat_type != 'PTS':
+            player_id = get_player_id(player_name)
+            if player_id:
+                line = get_season_average(player_id, stat_type=stat_type, season=season, player_name=player_name)
+                if not line or line <= 0:
+                    continue  # Skip if no data for this stat type
+            else:
+                continue
+        else:
+            line = pts_line
+        
         avg = fetch_recent_stats(player_name, stat_type=stat_type, season=season)
         
         # Get performance factors
