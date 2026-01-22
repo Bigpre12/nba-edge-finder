@@ -42,7 +42,25 @@ def on_exit(server, worker):
 
 def worker_abort(worker):
     """Called when a worker receives the SIGABRT signal."""
-    print(f"Worker {worker.pid} aborted")
+    print(f"Worker {worker.pid} received SIGABRT - aborting gracefully")
+    import traceback
+    traceback.print_exc()
+
+def when_ready(server):
+    """Called just after the server is started."""
+    print(f"Server is ready. Spawning {server.num_workers} worker(s).")
+
+def on_starting(server):
+    """Called just before the master process is initialized."""
+    print("Starting server...")
+
+def post_worker_init(worker):
+    """Called just after a worker has initialized the application."""
+    print(f"Worker {worker.pid} initialized")
+
+def worker_exit(server, worker):
+    """Called just after a worker has been exited, in the master process."""
+    print(f"Worker {worker.pid} exited (master process)")
 
 def worker_int(worker):
     """Called when a worker receives the SIGINT or SIGQUIT signal."""
