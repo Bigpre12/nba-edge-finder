@@ -146,33 +146,120 @@ def compare_lines_across_platforms(player_name: str, stat_type: str = 'PTS'):
     
     return None
 
+def get_relevant_players_for_today():
+    """
+    Get players that matter for today's slate:
+    1. Players with games today
+    2. Role players on hot streaks (2+ games)
+    3. Players with positive trending performance
+    
+    Returns:
+        list: List of relevant players with reasoning
+    """
+    from nba_engine import (
+        get_all_active_players, fetch_recent_games, calculate_streak,
+        get_player_performance_factors, get_season_average
+    )
+    from datetime import datetime
+    
+    relevant_players = []
+    active_players = get_all_active_players()
+    
+    if not active_players:
+        return []
+    
+    print(f"Filtering {len(active_players)} active players for relevant targets...")
+    
+    # Get today's date
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    for player in active_players:
+        player_name = player['full_name']
+        reasons = []
+        
+        try:
+            # Check for hot streaks (2+ consecutive OVER or UNDER hits)
+            # Use a reasonable line estimate (season average) for streak calculation
+            season_avg = get_season_average(player['id'], 'PTS', '2023-24', player_name)
+            if season_avg:
+                streak_info = calculate_streak(player_name, season_avg, 'PTS', '2023-24', min_streak=2)
+                if streak_info.get('active'):
+                    reasons.append(f"Hot streak: {streak_info['streak_count']} games {streak_info['streak_type']}")
+            
+            # Check for positive performance trends
+            factors = get_player_performance_factors(player_name, 'PTS', '2023-24')
+            if factors:
+                trend = factors.get('performance_trend', 'stable')
+                if trend == 'up':
+                    recent_avg = factors.get('recent_stat_avg', 0)
+                    older_avg = factors.get('older_stat_avg', 0)
+                    improvement = recent_avg - older_avg
+                    if improvement > 2:  # Significant improvement
+                        reasons.append(f"Positive trend: +{improvement:.1f} PTS improvement")
+                
+                # Check for role players with consistent minutes (not stars, but reliable)
+                recent_minutes = factors.get('recent_min_avg', 0)
+                if 20 <= recent_minutes <= 35:  # Role player minutes range
+                    if not factors.get('rotation_change', False) and not factors.get('injury_risk', False):
+                        reasons.append(f"Role player: {recent_minutes:.0f} MPG, stable rotation")
+            
+            # If player has any relevant reason, add them
+            if reasons:
+                relevant_players.append({
+                    'player': player,
+                    'player_name': player_name,
+                    'reasons': reasons,
+                    'priority': len(reasons)  # More reasons = higher priority
+                })
+        
+        except Exception as e:
+            # Skip players that error out (likely no data)
+            continue
+    
+    # Sort by priority (most reasons first)
+    relevant_players.sort(key=lambda x: x['priority'], reverse=True)
+    
+    print(f"Found {len(relevant_players)} relevant players for today's scan")
+    if relevant_players:
+        print("Top targets:")
+        for i, p in enumerate(relevant_players[:10], 1):
+            print(f"  {i}. {p['player_name']}: {', '.join(p['reasons'])}")
+    
+    return relevant_players
+
 def scan_active_players_for_glitches():
     """
-    Scan all active players for glitched props across platforms.
+    Scan relevant players for glitched props across platforms.
+    Focuses on:
+    - Players with games today
+    - Role players on hot streaks
+    - Players with positive trending performance
+    
     This is the main scanning function that runs periodically.
     """
     print(f"[{datetime.now()}] Starting automated glitched props scan...")
     
     try:
-        from nba_engine import get_all_active_players
+        # Get relevant players (not all active players)
+        relevant_players = get_relevant_players_for_today()
         
-        active_players = get_all_active_players()
-        if not active_players:
-            print("Warning: No active players found")
+        if not relevant_players:
+            print("No relevant players found for scanning")
             return []
         
-        print(f"Scanning {len(active_players)} active players across {len(PLATFORMS)} platforms...")
+        print(f"Scanning {len(relevant_players)} relevant players across {len(PLATFORMS)} platforms...")
         
         recent_scans = load_recent_scans()
         found_glitches = []
         scanned_count = 0
         
-        # Scan top players first (most likely to have lines)
-        # Limit to first 50 to avoid rate limits
-        players_to_scan = active_players[:50]
+        # Scan all relevant players (they're already filtered and prioritized)
+        players_to_scan = relevant_players
         
-        for player in players_to_scan:
-            player_name = player['full_name']
+        for player_data in players_to_scan:
+            player = player_data['player']
+            player_name = player_data['player_name']
+            reasons = player_data['reasons']
             scanned_count += 1
             
             # Check if we recently scanned this player
@@ -188,6 +275,9 @@ def scan_active_players_for_glitches():
                 glitch = compare_lines_across_platforms(player_name, 'PTS')
                 
                 if glitch:
+                    # Enhance reasoning with why this player was selected
+                    enhanced_reasoning = f"{glitch['reasoning']} | Target selected because: {', '.join(reasons)}"
+                    
                     prop_text = f"{player_name} {'O' if glitch['line'] < glitch['market_avg'] else 'U'} {glitch['line']} {glitch['stat_type']}"
                     
                     # Check if this prop already exists
@@ -198,20 +288,23 @@ def scan_active_players_for_glitches():
                     )
                     
                     if not is_duplicate:
-                        if add_glitched_prop(prop_text, glitch['reasoning'], glitch['rating'], glitch['platform']):
+                        if add_glitched_prop(prop_text, enhanced_reasoning, glitch['rating'], glitch['platform']):
                             found_glitches.append(glitch)
                             print(f"Found glitched prop: {prop_text} on {glitch['platform']} (Rating: {glitch['rating']}/10)")
+                            print(f"  Reasons: {', '.join(reasons)}")
                     
                     # Update recent scans
                     recent_scans[scan_key] = {
                         'last_scan': datetime.now().isoformat(),
-                        'found_glitch': True
+                        'found_glitch': True,
+                        'reasons': reasons
                     }
                 else:
                     # Update recent scans even if no glitch found
                     recent_scans[scan_key] = {
                         'last_scan': datetime.now().isoformat(),
-                        'found_glitch': False
+                        'found_glitch': False,
+                        'reasons': reasons
                     }
                 
                 # Rate limiting - be respectful
@@ -221,8 +314,8 @@ def scan_active_players_for_glitches():
                 print(f"Error scanning {player_name}: {e}")
                 continue
             
-            # Progress update every 10 players
-            if scanned_count % 10 == 0:
+            # Progress update every 5 players (since we're scanning fewer now)
+            if scanned_count % 5 == 0:
                 print(f"   Progress: {scanned_count}/{len(players_to_scan)} players scanned, {len(found_glitches)} glitches found...")
         
         # Save recent scans
