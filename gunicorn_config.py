@@ -11,7 +11,7 @@ bind = f"0.0.0.0:{port}"
 workers = 1
 worker_class = "sync"
 worker_connections = 1000
-timeout = 120  # Reduced to 2 minutes - edge calculation has its own 5-minute timeout
+timeout = 360  # 6 minutes - must be longer than edge calculation timeout (5 min) to allow graceful timeout
 keepalive = 5
 graceful_timeout = 30
 
