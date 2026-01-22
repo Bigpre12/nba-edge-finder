@@ -426,9 +426,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         
         track_line_changes(MARKET_PROJECTIONS)
         
-        # FREE TIER MODE: 12 players for 3 pages of 4 props each
-        # Frontend handles pagination - load more players for variety
-        max_players = 12
+        # FREE TIER MODE: 6 players to balance variety with memory limits
+        # Frontend handles pagination - shuffled for variety on each refresh
+        max_players = 6
         if len(MARKET_PROJECTIONS) > max_players:
             # Shuffle to get different players each time for variety
             import random
@@ -628,8 +628,8 @@ def index():
                             pass
                         return
                     
-                    # FREE TIER: 12 players - enough for 3 pages of 4 props each
-                    players_to_load = all_players[:12]
+                    # FREE TIER: 6 players to balance variety with memory limits
+                    players_to_load = all_players[:6]
                     print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}
