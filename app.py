@@ -1145,6 +1145,27 @@ def api_daily_update_status():
     
     return jsonify(status)
 
+@app.route('/api/loading-status')
+@requires_auth
+def api_loading_status():
+    """Get status of background player loading."""
+    loading_in_progress = getattr(app, '_loading_players', False)
+    loading_start_time = getattr(app, '_loading_start_time', None)
+    
+    # Calculate elapsed time if loading
+    elapsed_seconds = None
+    if loading_in_progress and loading_start_time:
+        import time as time_module
+        elapsed_seconds = int(time_module.time() - loading_start_time)
+    
+    return jsonify({
+        'loading_in_progress': loading_in_progress,
+        'player_count': len(MARKET_PROJECTIONS),
+        'started_at': loading_start_time,
+        'elapsed_seconds': elapsed_seconds,
+        'message': 'Loading players in background...' if loading_in_progress else ('Players loaded' if len(MARKET_PROJECTIONS) > 0 else 'No players loaded')
+    })
+
 @app.route('/api/trigger-update', methods=['POST'])
 @requires_auth
 def api_trigger_update():

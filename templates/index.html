@@ -43,6 +43,28 @@
         </div>
         {% endif %}
 
+        <!-- Loading Indicator - shown when players are being loaded in background -->
+        <div id="loadingIndicator" style="display: none; text-align: center; padding: 40px; background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05)); border: 2px solid #ffd700; border-radius: 12px; margin: 20px 0;">
+            <div style="font-size: 28px; color: #ffd700; margin-bottom: 15px;">⏳ Loading Players...</div>
+            <div style="font-size: 16px; color: #fff; margin-bottom: 10px;">
+                Background loading in progress. Please wait...
+            </div>
+            <div id="loadingProgress" style="font-size: 14px; color: #888;">
+                Checking status...
+            </div>
+            <div style="margin-top: 15px;">
+                <div style="width: 200px; height: 4px; background: #333; border-radius: 2px; margin: 0 auto; overflow: hidden;">
+                    <div id="loadingBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffd700, #ff8c00); animation: loadingPulse 2s ease-in-out infinite;"></div>
+                </div>
+            </div>
+            <style>
+                @keyframes loadingPulse {
+                    0%, 100% { width: 30%; margin-left: 0%; }
+                    50% { width: 50%; margin-left: 50%; }
+                }
+            </style>
+        </div>
+
         <div class="controls">
             <button onclick="refreshData()" class="refresh-btn" id="refreshBtn">🔄 Refresh Edges</button>
             <label class="auto-refresh-toggle">
@@ -1765,11 +1787,78 @@
             }
         }
 
+        // Check loading status and show indicator if players are being loaded
+        async function checkLoadingStatus() {
+            const playerCount = parseInt(document.getElementById('totalPlayers')?.textContent || '0');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const loadingProgress = document.getElementById('loadingProgress');
+            
+            // Only check if no players are loaded yet
+            if (playerCount === 0) {
+                try {
+                    const response = await fetch('/api/loading-status');
+                    const data = await response.json();
+                    
+                    if (data.player_count > 0) {
+                        // Players are now loaded! Refresh the page to show them
+                        console.log(`Players loaded (${data.player_count}), refreshing page...`);
+                        if (loadingIndicator) {
+                            loadingIndicator.innerHTML = `
+                                <div style="font-size: 28px; color: #00ff88; margin-bottom: 15px;">✅ Players Loaded!</div>
+                                <div style="font-size: 16px; color: #fff;">
+                                    ${data.player_count} players ready. Refreshing page...
+                                </div>
+                            `;
+                        }
+                        setTimeout(() => window.location.reload(), 1500);
+                        return;
+                    }
+                    
+                    // Still loading - show indicator
+                    if (loadingIndicator) {
+                        loadingIndicator.style.display = 'block';
+                    }
+                    
+                    if (data.loading_in_progress) {
+                        // Update progress message
+                        if (loadingProgress) {
+                            const elapsed = data.elapsed_seconds || 0;
+                            const mins = Math.floor(elapsed / 60);
+                            const secs = elapsed % 60;
+                            loadingProgress.textContent = `Loading in progress... (${mins}m ${secs}s elapsed)`;
+                        }
+                    } else {
+                        // Not loading yet - will start on first request
+                        if (loadingProgress) {
+                            loadingProgress.textContent = 'Waiting for background load to start...';
+                        }
+                    }
+                    
+                    // Check again in 3 seconds
+                    setTimeout(checkLoadingStatus, 3000);
+                    
+                } catch (error) {
+                    console.error('Error checking loading status:', error);
+                    // Still check again even if error
+                    setTimeout(checkLoadingStatus, 5000);
+                }
+            } else {
+                // Players are loaded, hide indicator
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+        }
+
         // Initial load timestamp
         document.addEventListener('DOMContentLoaded', function() {
             const now = new Date().toLocaleString();
             document.getElementById('lastUpdate').textContent = `Last updated: ${now}`;
             loadDailyUpdateStatus();
+            
+            // Check loading status immediately if no players loaded
+            checkLoadingStatus();
+            
             // Refresh status every minute
             setInterval(loadDailyUpdateStatus, 60000);
             // Track player count to detect when new players are loaded
@@ -1784,12 +1873,12 @@
                         const currentCount = data?.total_players_loaded || data?.projections_count || parseInt(document.getElementById('totalPlayers')?.textContent || '0');
                         if (currentCount > lastPlayerCount && lastPlayerCount >= 0) {
                             const newPlayers = currentCount - lastPlayerCount;
-                            console.log(`✅ New players detected! Count increased from ${lastPlayerCount} to ${currentCount}`);
+                            console.log(`New players detected! Count increased from ${lastPlayerCount} to ${currentCount}`);
                             lastPlayerCount = currentCount;
                             // Show a notification
                             const notification = document.createElement('div');
                             notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 15px 20px; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px;';
-                            notification.textContent = `✅ ${newPlayers} new player${newPlayers > 1 ? 's' : ''} loaded!`;
+                            notification.textContent = `${newPlayers} new player${newPlayers > 1 ? 's' : ''} loaded!`;
                             document.body.appendChild(notification);
                             setTimeout(() => notification.remove(), 5000);
                         } else if (currentCount !== lastPlayerCount) {
