@@ -464,6 +464,12 @@ def index():
                     # Reset flag when done
                     app._loading_players = False
             
+            # Check if a load is already in progress (simple flag check)
+            if not hasattr(app, '_loading_players'):
+                app._loading_players = False
+            
+            if not app._loading_players:
+                app._loading_players = True
                 # Start in background thread, don't wait
                 load_thread = threading.Thread(target=background_load, daemon=True)
                 load_thread.start()
