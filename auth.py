@@ -24,12 +24,22 @@ def requires_auth(f):
     """Decorator to require authentication."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Skip auth if no credentials are set (for public access)
-        if not os.environ.get('AUTH_USERNAME') and not os.environ.get('AUTH_PASSWORD'):
+        try:
+            # Skip auth if no credentials are set (for public access)
+            if not os.environ.get('AUTH_USERNAME') and not os.environ.get('AUTH_PASSWORD'):
+                return f(*args, **kwargs)
+            
+            auth = request.authorization
+            if not auth or not check_auth(auth.username, auth.password):
+                return authenticate()
             return f(*args, **kwargs)
-        
-        auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
-        return f(*args, **kwargs)
+        except Exception as e:
+            import sys
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"ERROR in requires_auth decorator: {type(e).__name__}: {e}", file=sys.stderr)
+            print(error_trace, file=sys.stderr)
+            # Return error response instead of crashing
+            from flask import jsonify
+            return jsonify({'error': 'Authentication error', 'message': str(e)}), 500
     return decorated

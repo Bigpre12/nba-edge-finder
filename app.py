@@ -800,15 +800,14 @@ def index():
         error_trace = traceback.format_exc()
         error_type = type(e).__name__
         error_msg = str(e)
-        print("=" * 80)
+        print("=" * 80, file=sys.stderr)
+        print(f"FATAL ERROR in index route: {error_type}: {error_msg}", file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        print(error_trace, file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        # Also print to stdout for visibility
         print(f"FATAL ERROR in index route: {error_type}: {error_msg}")
-        print("=" * 80)
         print(error_trace)
-        print("=" * 80)
-        # Log to stderr as well for Gunicorn to capture
-        import sys
-        sys.stderr.write(f"ERROR in index route: {error_type}: {error_msg}\n")
-        sys.stderr.write(error_trace + "\n")
         return f"""
         <html>
         <head><title>Error</title></head>
