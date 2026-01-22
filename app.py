@@ -393,12 +393,12 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         track_line_changes(MARKET_PROJECTIONS)
         
         # Limit number of players to process to prevent timeout and memory issues
-        # Process max 3 players at a time for faster response and lower memory usage
+        # Process max 5 players at a time for faster response and lower memory usage
         # This ensures the request completes within the timeout window and doesn't use too much memory
-        max_players = 3
+        max_players = 5
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
-            print(f"WARNING: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout")
+            print(f"INFO: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout (this is normal)")
         else:
             projections_to_check = MARKET_PROJECTIONS
         
