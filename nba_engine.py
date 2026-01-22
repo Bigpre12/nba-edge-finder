@@ -774,8 +774,9 @@ def extract_team_from_matchup(matchup_str):
 
 def get_team_defensive_ranking(team_abbr, stat_type='PTS', season='2023-24'):
     """
-    Get team's defensive ranking for a specific stat.
-    Returns ranking (1-30, lower is worse defense) and average allowed.
+    Get team's defensive ranking for any stat category.
+    Returns ranking estimate and average allowed for the stat.
+    Supports: PTS, REB, AST, STL, BLK, FG3M, and combinations.
     """
     try:
         # Use correct method to find team by abbreviation
@@ -785,32 +786,94 @@ def get_team_defensive_ranking(team_abbr, stat_type='PTS', season='2023-24'):
         
         team_id = team_list[0]['id']
         
-        # Get team game log to calculate defensive stats
+        # Get team game log to calculate stats
         team_log = teamgamelog.TeamGameLog(team_id=team_id, season=season)
         df = team_log.get_data_frames()[0]
         
         if df.empty:
             return None
         
-        # Calculate average points allowed (for PTS stat)
-        if stat_type == 'PTS':
-            avg_allowed = df['PTS'].mean() if 'PTS' in df.columns else None
-            if avg_allowed is None:
+        # Handle combination stats (e.g., PTS+REB)
+        is_combination = '+' in stat_type
+        if is_combination:
+            components = stat_type.split('+')
+            # Calculate average for combination stat
+            avg_allowed = None
+            for component in components:
+                if component not in df.columns:
+                    return None
+                component_avg = df[component].mean()
+                if avg_allowed is None:
+                    avg_allowed = component_avg
+                else:
+                    avg_allowed += component_avg
+        else:
+            # Single stat
+            if stat_type not in df.columns:
                 return None
-            
-            # This is simplified - in reality would need all teams to rank
-            # For now, return relative ranking estimate
-            # Higher avg_allowed = worse defense
-            return {
-                'avg_allowed': round(avg_allowed, 1),
-                'ranking_estimate': 'top-10' if avg_allowed < 110 else 'bottom-10' if avg_allowed > 115 else 'middle',
-                'is_weak': avg_allowed > 115
-            }
+            avg_allowed = df[stat_type].mean()
         
-        return None
+        if avg_allowed is None or pd.isna(avg_allowed):
+            return None
+        
+        # Determine ranking estimate based on stat type
+        # For PTS: lower is better defense, higher avg_allowed = worse defense
+        # For other stats: similar logic applies
+        if stat_type == 'PTS':
+            is_weak = avg_allowed > 115
+            ranking_estimate = 'top-10' if avg_allowed < 110 else 'bottom-10' if avg_allowed > 115 else 'middle'
+        elif stat_type == 'REB':
+            # For rebounds, higher allowed = worse defense
+            is_weak = avg_allowed > 45
+            ranking_estimate = 'top-10' if avg_allowed < 42 else 'bottom-10' if avg_allowed > 45 else 'middle'
+        elif stat_type == 'AST':
+            # For assists, higher allowed = worse defense
+            is_weak = avg_allowed > 28
+            ranking_estimate = 'top-10' if avg_allowed < 24 else 'bottom-10' if avg_allowed > 28 else 'middle'
+        elif stat_type == 'STL':
+            # For steals, lower allowed = better defense (opponent steals less)
+            is_weak = avg_allowed > 8
+            ranking_estimate = 'top-10' if avg_allowed < 7 else 'bottom-10' if avg_allowed > 8 else 'middle'
+        elif stat_type == 'BLK':
+            # For blocks, lower allowed = better defense (opponent blocks less)
+            is_weak = avg_allowed > 6
+            ranking_estimate = 'top-10' if avg_allowed < 4.5 else 'bottom-10' if avg_allowed > 6 else 'middle'
+        elif stat_type == 'FG3M' or stat_type == '3PM':
+            # For 3-pointers made, higher allowed = worse defense
+            is_weak = avg_allowed > 14
+            ranking_estimate = 'top-10' if avg_allowed < 11 else 'bottom-10' if avg_allowed > 14 else 'middle'
+        elif is_combination:
+            # For combinations, use general thresholds
+            # PTS+REB: ~55-60 is average, >65 is weak, <50 is strong
+            # PTS+AST: ~50-55 is average, >60 is weak, <45 is strong
+            # REB+AST: ~50-55 is average, >60 is weak, <45 is strong
+            if 'PTS' in components and 'REB' in components:
+                is_weak = avg_allowed > 65
+                ranking_estimate = 'top-10' if avg_allowed < 50 else 'bottom-10' if avg_allowed > 65 else 'middle'
+            elif 'PTS' in components and 'AST' in components:
+                is_weak = avg_allowed > 60
+                ranking_estimate = 'top-10' if avg_allowed < 45 else 'bottom-10' if avg_allowed > 60 else 'middle'
+            elif 'REB' in components and 'AST' in components:
+                is_weak = avg_allowed > 60
+                ranking_estimate = 'top-10' if avg_allowed < 45 else 'bottom-10' if avg_allowed > 60 else 'middle'
+            else:
+                # Generic for other combinations
+                is_weak = avg_allowed > 50
+                ranking_estimate = 'middle'
+        else:
+            # Default for unknown stats
+            is_weak = False
+            ranking_estimate = 'middle'
+        
+        return {
+            'avg_allowed': round(avg_allowed, 1),
+            'ranking_estimate': ranking_estimate,
+            'is_weak': is_weak,
+            'stat_type': stat_type
+        }
     except Exception as e:
         # Suppress error logging for this function - it's not critical
-        # print(f"Error getting defensive stats for {team_abbr}: {e}")
+        # print(f"Error getting team stats for {team_abbr} ({stat_type}): {e}")
         return None
 
 def analyze_player_vs_team_matchup(player_name, opponent_team, stat_type='PTS', season='2023-24'):
@@ -902,13 +965,18 @@ def identify_statistical_beneficiary(edge_data, stat_type='PTS', season='2023-24
     
     # Confidence logic
     confidence_logic = ""
-    if defensive_stats and defensive_stats.get('is_weak'):
-        confidence_logic = f"{opponent_team} allows {defensive_stats.get('avg_allowed', 0):.1f} {stat_type}/game (weak defense)."
-    elif matchup_analysis and matchup_analysis.get('advantage', 0) > 2:
-        confidence_logic = f"Player averages {matchup_analysis['avg_vs_opponent']:.1f} vs {opponent_team} (vs {matchup_analysis['overall_avg']:.1f} overall)."
-    elif edge_data.get('difference', 0) > 3:
-        confidence_logic = f"L5 average ({projection:.1f}) diverges {abs(projection_diff):.1f}pts from line ({consensus_expectation:.1f})."
-    else:
+    try:
+        if defensive_stats and defensive_stats.get('is_weak'):
+            stat_display = defensive_stats.get('stat_type', stat_type)
+            confidence_logic = f"{opponent_team} allows {defensive_stats.get('avg_allowed', 0):.1f} {stat_display}/game (weak defense)."
+        elif matchup_analysis and matchup_analysis.get('advantage', 0) > 2:
+            confidence_logic = f"Player averages {matchup_analysis['avg_vs_opponent']:.1f} vs {opponent_team} (vs {matchup_analysis['overall_avg']:.1f} overall)."
+        elif edge_data.get('difference', 0) > 3:
+            confidence_logic = f"L5 average ({projection:.1f}) diverges {abs(projection_diff):.1f}pts from line ({consensus_expectation:.1f})."
+        else:
+            confidence_logic = f"Recent form ({projection:.1f}) vs market expectation ({consensus_expectation:.1f})."
+    except Exception:
+        # Fallback if analysis fails
         confidence_logic = f"Recent form ({projection:.1f}) vs market expectation ({consensus_expectation:.1f})."
     
     return {
