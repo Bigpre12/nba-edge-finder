@@ -102,11 +102,11 @@ def save_projections(projections):
 
 # Load projections immediately on startup (not lazy - we want it ready)
 MARKET_PROJECTIONS = load_projections()
-print(f"📊 Startup: Loaded {len(MARKET_PROJECTIONS)} players from projections file")
+print(f"Startup: Loaded {len(MARKET_PROJECTIONS)} players from projections file")
 
 # If no players loaded, start background loading immediately on startup
 if len(MARKET_PROJECTIONS) == 0:
-    print("⚠️ No players found - starting background load on startup...")
+    print("WARNING: No players found - starting background load on startup...")
     import threading
     import time
     
@@ -114,7 +114,7 @@ if len(MARKET_PROJECTIONS) == 0:
         """Load players in background during app startup."""
         global MARKET_PROJECTIONS
         print("=" * 60)
-        print("🔄 STARTUP AUTO-LOAD: Loading players in background...")
+        print("STARTUP AUTO-LOAD: Loading players in background...")
         print("=" * 60)
         try:
             from nba_engine import get_all_active_players, get_season_average
@@ -123,12 +123,12 @@ if len(MARKET_PROJECTIONS) == 0:
             all_players = get_all_active_players()
             
             if not all_players:
-                print("❌ No active players available from NBA API")
+                print("ERROR: No active players available from NBA API")
                 return
             
             # Load top 50 players to get started quickly
             players_to_load = all_players[:50]
-            print(f"📊 Loading projections for {len(players_to_load)} players...")
+            print(f"Loading projections for {len(players_to_load)} players...")
             
             new_projections = {}
             loaded_count = 0
@@ -154,7 +154,7 @@ if len(MARKET_PROJECTIONS) == 0:
                             new_projections[player_name] = round(avg, 1)
                             loaded_count += 1
                             if loaded_count % 10 == 0:
-                                print(f"   ✅ Loaded {loaded_count}/{len(players_to_load)} players...")
+                                print(f"   Loaded {loaded_count}/{len(players_to_load)} players...")
                     
                     # Rate limiting
                     if i % 10 == 0:
@@ -168,7 +168,7 @@ if len(MARKET_PROJECTIONS) == 0:
                     failed_count += 1
                     error_str = str(e).lower()
                     if 'no data' not in error_str and 'empty' not in error_str:
-                        print(f"   ⚠️ Error loading {player_name}: {type(e).__name__}")
+                        print(f"   WARNING: Error loading {player_name}: {type(e).__name__}")
                     continue
             
             # Save if we got players
@@ -176,31 +176,31 @@ if len(MARKET_PROJECTIONS) == 0:
                 if save_projections(new_projections):
                     MARKET_PROJECTIONS = new_projections
                     print("=" * 60)
-                    print(f"✅ STARTUP LOAD COMPLETE! Loaded {len(MARKET_PROJECTIONS)} players")
+                    print(f"SUCCESS: STARTUP LOAD COMPLETE! Loaded {len(MARKET_PROJECTIONS)} players")
                     print(f"   Sample: {', '.join(list(new_projections.keys())[:10])}...")
                     print("=" * 60)
                 else:
-                    print("❌ Failed to save projections file")
+                    print("ERROR: Failed to save projections file")
             else:
-                print(f"⚠️ Warning: No players loaded during startup")
+                print(f"WARNING: No players loaded during startup")
         except Exception as e:
-            print(f"❌ Error in startup background load: {e}")
+            print(f"ERROR: Error in startup background load: {e}")
             import traceback
             traceback.print_exc()
     
     # Start background thread immediately
     startup_thread = threading.Thread(target=startup_background_load, daemon=True)
     startup_thread.start()
-    print("🚀 Background loading started - app will be ready shortly...")
+    print("Background loading started - app will be ready shortly...")
 else:
-    print(f"✅ App ready with {len(MARKET_PROJECTIONS)} players loaded!")
+    print(f"SUCCESS: App ready with {len(MARKET_PROJECTIONS)} players loaded!")
 
 def get_market_projections(force_reload=False):
     """Get current projections, reloading if requested."""
     global MARKET_PROJECTIONS
     if force_reload:
         MARKET_PROJECTIONS = load_projections()
-        print(f"📊 Reloaded {len(MARKET_PROJECTIONS)} players from projections file")
+        print(f"Reloaded {len(MARKET_PROJECTIONS)} players from projections file")
     return MARKET_PROJECTIONS
 
 # Initialize scheduler for daily updates (only start if not already running)
