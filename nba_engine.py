@@ -10,17 +10,6 @@ from cache_manager import get_cache_key, get_cached_data, set_cached_data
 from requests.exceptions import Timeout, ConnectionError, RequestException
 import requests
 
-# Configure default timeout for all requests
-import nba_api.stats.endpoints.base
-if hasattr(nba_api.stats.endpoints.base, 'BaseEndpoint'):
-    # Set default timeout for NBA API requests
-    try:
-        import nba_api.live.nba.endpoints
-        # NBA API uses requests library, configure timeout at session level if possible
-        pass
-    except:
-        pass
-
 def get_player_id(name):
     """
     Find NBA player ID by full name.
