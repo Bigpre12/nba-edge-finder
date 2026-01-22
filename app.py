@@ -375,59 +375,47 @@ def index():
                 print("🔄 AUTO-LOAD: Starting background load of relevant players...")
                 print("=" * 60)
                 try:
-                    from glitched_props_scanner import get_relevant_players_for_today
-                    from nba_engine import get_season_average
+                    # SIMPLIFIED: Just load top 50 active players directly (skip filtering)
+                    # This is more reliable and faster
+                    from nba_engine import get_all_active_players, get_season_average
                     
-                    # Get relevant players (same filtering as glitched props scanner)
-                    print("Fetching relevant players list...")
-                    relevant_players = get_relevant_players_for_today()
+                    print("Fetching active players list...")
+                    all_players = get_all_active_players()
                     
-                    if not relevant_players or len(relevant_players) < 10:
-                        print(f"⚠️ Only {len(relevant_players) if relevant_players else 0} relevant players found")
-                        print("   Falling back to loading top 75 active players...")
-                        # Fallback: load top 75 players by season average
-                        from nba_engine import get_all_active_players
-                        all_players = get_all_active_players()
-                        if all_players:
-                            # Take first 75 players as fallback
-                            relevant_players = [{'player': p, 'player_name': p['full_name']} for p in all_players[:75]]
-                            print(f"   ✅ Using fallback: {len(relevant_players)} players")
-                        else:
-                            print("   ❌ No active players available")
-                            return
-                    
-                    if not relevant_players:
-                        print("❌ No players available to load")
+                    if not all_players:
+                        print("❌ No active players available from NBA API")
+                        app._loading_players = False
                         return
                     
-                    print(f"📊 Generating projections for {len(relevant_players)} players...")
+                    # Load top 50 players (enough to get started)
+                    players_to_load = all_players[:50]
+                    print(f"📊 Loading projections for {len(players_to_load)} players...")
                     
-                    # Generate projections only for relevant players
                     new_projections = {}
                     loaded_count = 0
                     failed_count = 0
                     
-                    for i, player_data in enumerate(relevant_players):
-                        player = player_data['player']
-                        player_name = player_data['player_name']
+                    for i, player in enumerate(players_to_load):
+                        player_name = player['full_name']
+                        player_id = player['id']
                         
                         try:
                             # Get season average as projection
-                            season_avg = get_season_average(player['id'], 'PTS', '2023-24', player_name)
+                            season_avg = get_season_average(player_id, 'PTS', '2023-24', player_name)
                             if season_avg and season_avg > 0:
                                 new_projections[player_name] = round(season_avg, 1)
                                 loaded_count += 1
                             else:
                                 failed_count += 1
                             
-                            # Progress logging
+                            # Progress logging every 10 players
                             if (i + 1) % 10 == 0:
-                                print(f"   📈 Progress: {i + 1}/{len(relevant_players)} processed ({loaded_count} loaded, {failed_count} failed)...")
+                                print(f"   📈 Progress: {i + 1}/{len(players_to_load)} processed ({loaded_count} loaded, {failed_count} failed)...")
                             
                             # Rate limiting - more conservative to avoid timeouts
-                            if loaded_count % 10 == 0:
+                            if (i + 1) % 10 == 0:
                                 time.sleep(5)  # Longer pause every 10 players
-                            elif loaded_count % 5 == 0:
+                            elif (i + 1) % 5 == 0:
                                 time.sleep(2.5)  # Medium pause every 5 players
                             else:
                                 time.sleep(1.5)  # Increased delay between players
@@ -440,7 +428,8 @@ def index():
                     # Always ensure default players are included
                     new_projections = ensure_default_projections(new_projections)
                     
-                    if new_projections and len(new_projections) > 3:
+                    # Save whatever we got (even if less than expected)
+                    if new_projections:
                         if save_projections(new_projections):
                             MARKET_PROJECTIONS = new_projections
                             print("=" * 60)
@@ -450,12 +439,8 @@ def index():
                         else:
                             print("❌ Failed to save projections file")
                     else:
-                        print(f"⚠️ Warning: Only loaded {len(new_projections) if new_projections else 0} players")
+                        print(f"⚠️ Warning: No players loaded")
                         print("   This might be due to NBA API rate limits or network issues.")
-                        # Still save what we have
-                        if new_projections:
-                            save_projections(new_projections)
-                            MARKET_PROJECTIONS = new_projections
                 except Exception as e:
                     print(f"❌ Error auto-loading players: {e}")
                     import traceback
@@ -463,6 +448,9 @@ def index():
                 finally:
                     # Reset flag when done
                     app._loading_players = False
+                    print("=" * 60)
+                    print("Background loading thread completed.")
+                    print("=" * 60)
             
             # Check if a load is already in progress (simple flag check)
             if not hasattr(app, '_loading_players'):
@@ -473,7 +461,7 @@ def index():
                 # Start in background thread, don't wait
                 load_thread = threading.Thread(target=background_load, daemon=True)
                 load_thread.start()
-                print(f"🚀 Started background thread to load relevant players...")
+                print(f"🚀 Started background thread to load players...")
                 print(f"   Current projections: {len(MARKET_PROJECTIONS)} players")
                 print(f"   Thread will run in background and save to {PROJECTIONS_FILE}")
             else:
