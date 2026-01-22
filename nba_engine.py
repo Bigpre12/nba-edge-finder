@@ -775,15 +775,8 @@ def get_team_defensive_ranking(team_abbr, stat_type='PTS', season='2023-24'):
     Supports: PTS, REB, AST, STL, BLK, FG3M, and combinations.
     """
     try:
-        # Find team by abbreviation - nba_api doesn't have find_teams_by_abbreviation
-        # Instead, we need to search through all teams
-        all_teams = teams.get_teams()
-        team_match = None
-        for team in all_teams:
-            if team['abbreviation'] == team_abbr:
-                team_match = team
-                break
-        
+        # Use the correct method name (singular, not plural)
+        team_match = teams.find_team_by_abbreviation(team_abbr)
         if not team_match:
             return None
         
