@@ -53,6 +53,15 @@ def on_starting(server):
 def post_worker_init(worker):
     """Called just after a worker has initialized the application."""
     print(f"Worker {worker.pid} initialized")
+    # Verify app is accessible
+    try:
+        from app import app
+        print(f"Worker {worker.pid}: Flask app accessible, routes: {len(app.url_map._rules)}")
+    except Exception as e:
+        print(f"ERROR: Worker {worker.pid} failed to access Flask app: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        raise  # Re-raise to fail worker boot
 
 def worker_exit(server, worker):
     """Called just after a worker has been exited, in the master process."""
