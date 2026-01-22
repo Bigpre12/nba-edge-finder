@@ -426,12 +426,16 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         
         track_line_changes(MARKET_PROJECTIONS)
         
-        # FREE TIER MODE: 4 players to balance usability with memory limits
-        # Increased from 2 for better user experience
-        max_players = 4
+        # FREE TIER MODE: 12 players for 3 pages of 4 props each
+        # Frontend handles pagination - load more players for variety
+        max_players = 12
         if len(MARKET_PROJECTIONS) > max_players:
-            projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
-            print(f"INFO: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout (this is normal)")
+            # Shuffle to get different players each time for variety
+            import random
+            all_items = list(MARKET_PROJECTIONS.items())
+            random.shuffle(all_items)
+            projections_to_check = dict(all_items[:max_players])
+            print(f"INFO: Processing {max_players} of {len(MARKET_PROJECTIONS)} players (shuffled for variety)")
         else:
             projections_to_check = MARKET_PROJECTIONS
         
@@ -624,8 +628,8 @@ def index():
                             pass
                         return
                     
-                    # FREE TIER: 4 players - balance usability with memory limits
-                    players_to_load = all_players[:4]
+                    # FREE TIER: 12 players - enough for 3 pages of 4 props each
+                    players_to_load = all_players[:12]
                     print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}
@@ -879,9 +883,6 @@ def api_edges():
         print(f"Error validating stat type in API: {e}")
         stat_type = 'PTS'
     
-    # Check if we should show all or just 70%+
-    show_all = request.args.get('show_all', 'false').lower() == 'true'
-    
     # Get filter parameters
     sort_by = request.args.get('sort_by', 'ev')
     min_probability = float(request.args.get('min_probability', 70.0))
@@ -891,6 +892,12 @@ def api_edges():
     positive_ev_only = request.args.get('positive_ev_only', 'false').lower() == 'true'
     exclude_injuries = request.args.get('exclude_injuries', 'false').lower() == 'true'
     exclude_rotation = request.args.get('exclude_rotation', 'false').lower() == 'true'
+    
+    # If user explicitly set a min_probability, respect it (don't override with 70)
+    show_all = request.args.get('show_all', 'false').lower() == 'true'
+    # Also treat explicit min_probability < 70 as "show_all" mode
+    if min_probability < 70:
+        show_all = True
     
     try:
         edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(

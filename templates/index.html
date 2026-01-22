@@ -2055,7 +2055,7 @@
 
         // Pagination state
         let currentPage = 1;
-        const itemsPerPage = 50;
+        const itemsPerPage = 4;  // Show 4 props per page as requested
         let allEdges = [];
         
         function generatePaginationHTML(totalPages, currentPage, startIdx, endIdx, totalItems) {
@@ -2136,10 +2136,22 @@
                             <h2>${probLabel} (<span id="edgeCount">${edges.length}</span>)</h2>
                         </div>
                         ${generatePaginationHTML(totalPages, currentPage, startIdx, endIdx, edges.length)}
-                        <p class="section-subtitle">${minProb > 0 ? `Only showing props with ${minProb}%+ hit probability from all active NBA players` : 'Showing all edges'}</p>
-                        <div class="edges-grid" id="edgesGrid">
-                            ${pageEdges.map(edge => renderEdgeCard(edge)).join('')}
-                        </div>
+                        <table class="props-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Prop</th>
+                                    <th>Line</th>
+                                    <th>Pick</th>
+                                    <th>Probability</th>
+                                    <th>EV</th>
+                                    <th>Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pageEdges.map(edge => renderEdgeRow(edge)).join('')}
+                            </tbody>
+                        </table>
                         ${generatePaginationHTML(totalPages, currentPage, startIdx, endIdx, edges.length)}
                     </div>
                 `;
@@ -2210,6 +2222,42 @@
                     `}
                     ${edge.streak && edge.streak.active ? renderStreakBadge(edge.streak) : ''}
                 </div>
+            `;
+        }
+        
+        // Clean table row format like Yesterday's Bets
+        function renderEdgeRow(edge) {
+            const pick = edge.recommendation || 'OVER';
+            const pickClass = pick.toLowerCase() === 'over' ? 'pick-over' : 'pick-under';
+            const prob = edge.probability || 0;
+            const probClass = prob >= 80 ? 'prob-high' : (prob >= 70 ? 'prob-medium' : 'prob-low');
+            const ev = edge.ev?.ev || edge.analytics?.ev || 0;
+            const evClass = ev > 0 ? 'ev-positive' : 'ev-negative';
+            const grade = edge.confidence?.grade || edge.analytics?.grade || '-';
+            const gradeClass = 'grade-' + grade.toLowerCase().replace('+', 'plus').replace('-', 'minus');
+            const statType = edge.stat_type || 'PTS';
+            
+            return `
+                <tr class="prop-row">
+                    <td class="player-cell">
+                        <div class="player-name">${edge.player || 'Unknown'}</div>
+                        <div class="player-team">${edge.team || ''}</div>
+                    </td>
+                    <td class="stat-cell">${statType}</td>
+                    <td class="line-cell">${edge.line || '-'}</td>
+                    <td class="pick-cell">
+                        <span class="pick-badge ${pickClass}">${pick}</span>
+                    </td>
+                    <td class="prob-cell">
+                        <span class="prob-value ${probClass}">${prob.toFixed(0)}%</span>
+                    </td>
+                    <td class="ev-cell">
+                        <span class="ev-value ${evClass}">${ev > 0 ? '+' : ''}${ev.toFixed(2)}</span>
+                    </td>
+                    <td class="grade-cell">
+                        <span class="grade-badge ${gradeClass}">${grade}</span>
+                    </td>
+                </tr>
             `;
         }
         
