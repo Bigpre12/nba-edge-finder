@@ -158,14 +158,14 @@ def init_scheduler():
             def glitched_props_scan_job():
                 """Run glitched props scan every 15 minutes (24/7)."""
                 try:
-                    print(f"[{datetime.now()}] 🔍 Running automated glitched props scan...")
+                    print(f"[{datetime.now()}] Running automated glitched props scan...")
                     found_glitches = scan_active_players_for_glitches()
                     if found_glitches:
-                        print(f"✅ Found {len(found_glitches)} new glitched props")
+                        print(f"Found {len(found_glitches)} new glitched props")
                     else:
-                        print("ℹ️ No new glitched props found this scan")
+                        print("No new glitched props found this scan")
                 except Exception as e:
-                    print(f"❌ Error in glitched props scan job: {e}")
+                    print(f"Error in glitched props scan job: {e}")
                     import traceback
                     traceback.print_exc()
             
@@ -192,7 +192,7 @@ def init_scheduler():
             
             # Shut down scheduler on app exit
             atexit.register(lambda: scheduler.shutdown() if scheduler and hasattr(scheduler, 'shutdown') else None)
-            print("✅ Scheduler initialized successfully")
+            print("Scheduler initialized successfully")
             print("   - Daily update: 8:00 AM")
             print("   - Glitched props scan: Every 15 minutes (24/7)")
     except Exception as e:

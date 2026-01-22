@@ -151,17 +151,17 @@ def scan_active_players_for_glitches():
     Scan all active players for glitched props across platforms.
     This is the main scanning function that runs periodically.
     """
-    print(f"[{datetime.now()}] 🔍 Starting automated glitched props scan...")
+    print(f"[{datetime.now()}] Starting automated glitched props scan...")
     
     try:
         from nba_engine import get_all_active_players
         
         active_players = get_all_active_players()
         if not active_players:
-            print("⚠️ No active players found")
-            return
+            print("Warning: No active players found")
+            return []
         
-        print(f"📊 Scanning {len(active_players)} active players across {len(PLATFORMS)} platforms...")
+        print(f"Scanning {len(active_players)} active players across {len(PLATFORMS)} platforms...")
         
         recent_scans = load_recent_scans()
         found_glitches = []
@@ -200,7 +200,7 @@ def scan_active_players_for_glitches():
                     if not is_duplicate:
                         if add_glitched_prop(prop_text, glitch['reasoning'], glitch['rating'], glitch['platform']):
                             found_glitches.append(glitch)
-                            print(f"✅ Found glitched prop: {prop_text} on {glitch['platform']} (Rating: {glitch['rating']}/10)")
+                            print(f"Found glitched prop: {prop_text} on {glitch['platform']} (Rating: {glitch['rating']}/10)")
                     
                     # Update recent scans
                     recent_scans[scan_key] = {
@@ -218,22 +218,22 @@ def scan_active_players_for_glitches():
                 time.sleep(2)  # 2 seconds between players
                 
             except Exception as e:
-                print(f"❌ Error scanning {player_name}: {e}")
+                print(f"Error scanning {player_name}: {e}")
                 continue
             
             # Progress update every 10 players
             if scanned_count % 10 == 0:
-                print(f"   📈 Progress: {scanned_count}/{len(players_to_scan)} players scanned, {len(found_glitches)} glitches found...")
+                print(f"   Progress: {scanned_count}/{len(players_to_scan)} players scanned, {len(found_glitches)} glitches found...")
         
         # Save recent scans
         save_recent_scans(recent_scans)
         
-        print(f"✅ Scan complete: {scanned_count} players scanned, {len(found_glitches)} new glitched props found")
+        print(f"Scan complete: {scanned_count} players scanned, {len(found_glitches)} new glitched props found")
         
         return found_glitches
         
     except Exception as e:
-        print(f"❌ Error in glitched props scan: {e}")
+        print(f"Error in glitched props scan: {e}")
         import traceback
         traceback.print_exc()
         return []
