@@ -72,6 +72,9 @@ def save_projections(projections):
             print("⚠️ Warning: Attempted to save empty projections")
             return False
         
+        # Ensure all default players are present before saving
+        projections = ensure_default_projections(projections)
+        
         file_path = os.path.abspath(PROJECTIONS_FILE)
         print(f"💾 Saving {len(projections)} players to: {file_path}")
         
