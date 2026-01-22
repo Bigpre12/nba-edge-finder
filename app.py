@@ -1,28 +1,107 @@
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime, time
-from nba_engine import check_for_edges, get_all_active_players, generate_projections_from_active_players
-from line_tracker import (
-    track_line_changes, get_line_changes, add_to_chase_list, get_chase_list,
-    remove_from_chase_list, add_alt_line, get_alt_lines, update_line
-)
-from glitched_props import (
-    add_glitched_prop, get_glitched_props, remove_glitched_prop, update_glitched_prop
-)
-from glitched_props_scanner import scan_active_players_for_glitches, get_scan_status
-from auth import requires_auth
-from cache_manager import clear_old_cache
-from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display
-from advanced_analytics import (
-    enhance_edge_with_analytics, sort_edges_by_ev, sort_edges_by_market_edge,
-    sort_edges_by_grade, apply_tactical_filters, get_sort_options, get_filter_options
-)
-from stat_categories import (
-    get_stat_categories, get_individual_stats, get_combination_stats,
-    get_stat_display_name, is_valid_stat_type
-)
 import json
 import os
 import atexit
+import sys
+
+# Import core modules with error handling to prevent startup failures
+try:
+    from nba_engine import check_for_edges, get_all_active_players, generate_projections_from_active_players
+except ImportError as e:
+    print(f"CRITICAL: Failed to import nba_engine: {e}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    from line_tracker import (
+        track_line_changes, get_line_changes, add_to_chase_list, get_chase_list,
+        remove_from_chase_list, add_alt_line, get_alt_lines, update_line
+    )
+except ImportError as e:
+    print(f"CRITICAL: Failed to import line_tracker: {e}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    from glitched_props import (
+        add_glitched_prop, get_glitched_props, remove_glitched_prop, update_glitched_prop
+    )
+except ImportError as e:
+    print(f"CRITICAL: Failed to import glitched_props: {e}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    from glitched_props_scanner import scan_active_players_for_glitches, get_scan_status
+except ImportError as e:
+    print(f"WARNING: Failed to import glitched_props_scanner: {e}", file=sys.stderr)
+    # Make stub functions to prevent errors
+    def scan_active_players_for_glitches():
+        return []
+    def get_scan_status():
+        return {'status': 'disabled', 'error': 'Module not available'}
+
+try:
+    from auth import requires_auth
+except ImportError as e:
+    print(f"CRITICAL: Failed to import auth: {e}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    from cache_manager import clear_old_cache
+except ImportError as e:
+    print(f"WARNING: Failed to import cache_manager: {e}", file=sys.stderr)
+    def clear_old_cache():
+        pass
+
+try:
+    from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display
+except ImportError as e:
+    print(f"WARNING: Failed to import parlay_calculator: {e}", file=sys.stderr)
+    def recommend_parlays(*args, **kwargs):
+        return {}
+    def calculate_parlay_payout(*args, **kwargs):
+        return {}
+    def format_parlay_display(*args, **kwargs):
+        return ""
+
+try:
+    from advanced_analytics import (
+        enhance_edge_with_analytics, sort_edges_by_ev, sort_edges_by_market_edge,
+        sort_edges_by_grade, apply_tactical_filters, get_sort_options, get_filter_options
+    )
+except ImportError as e:
+    print(f"WARNING: Failed to import advanced_analytics: {e}", file=sys.stderr)
+    def enhance_edge_with_analytics(*args, **kwargs):
+        return {}
+    def sort_edges_by_ev(edges):
+        return edges
+    def sort_edges_by_market_edge(edges):
+        return edges
+    def sort_edges_by_grade(edges):
+        return edges
+    def apply_tactical_filters(edges, filters):
+        return edges
+    def get_sort_options():
+        return []
+    def get_filter_options():
+        return {}
+
+try:
+    from stat_categories import (
+        get_stat_categories, get_individual_stats, get_combination_stats,
+        get_stat_display_name, is_valid_stat_type
+    )
+except ImportError as e:
+    print(f"WARNING: Failed to import stat_categories: {e}", file=sys.stderr)
+    def get_stat_categories():
+        return {}
+    def get_individual_stats():
+        return []
+    def get_combination_stats():
+        return []
+    def get_stat_display_name(stat):
+        return stat
+    def is_valid_stat_type(stat):
+        return True
 
 # Try to import scheduler, but don't fail if it's not available
 try:
