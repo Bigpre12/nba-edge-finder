@@ -1,130 +1,495 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NBA Edge Finder</title>
-    <link rel="stylesheet" href="/static/style-lite.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NBA Edge Finder — Live</title>
+<style>
+  :root{--bg:#0a0a0a;--surface:#111;--border:#222;--text:#e0e0e0;--muted:#888;--gold:#ffd700;--green:#27ae60;--red:#e74c3c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5;background:var(--bg);color:var(--text);padding:16px;min-height:100vh}
+  h1{color:var(--gold);font-size:1.8rem;margin-bottom:4px}
+  h2{color:var(--gold);font-size:1.2rem;margin:16px 0 8px}
+  h3{color:var(--text);font-size:1rem;margin:12px 0 6px;border-bottom:1px solid var(--border);padding-bottom:4px}
+  
+  /* Status bar */
+  #proof{color:var(--muted);font-size:0.85rem;margin-bottom:16px}
+  #proof.stale{color:var(--red)}
+  
+  /* Tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{padding:10px 16px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;font-size:0.95rem;transition:all 0.2s}
+  .tab:hover{border-color:var(--gold);color:var(--text)}
+  .tab:focus{outline:2px solid var(--gold);outline-offset:2px}
+  .tab[aria-selected="true"]{border-color:var(--gold);background:rgba(255,215,0,0.1);color:var(--gold);font-weight:600}
+  
+  /* Filter bar */
+  .filter-bar{display:flex;gap:12px;align-items:center;margin-bottom:16px;padding:10px 14px;background:var(--surface);border-radius:8px;flex-wrap:wrap}
+  .filter-bar label{color:var(--muted);font-size:0.9rem}
+  .filter-bar select{padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:0.9rem}
+  .filter-bar select:focus{outline:2px solid var(--gold);border-color:var(--gold)}
+  
+  /* Spinner */
+  .spinner{display:inline-block;width:18px;height:18px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  
+  /* Cards */
+  .card{border:1px solid var(--border);padding:14px;border-radius:8px;margin-bottom:10px;background:var(--surface)}
+  .card.high-prob{border-left:3px solid var(--green)}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .player-name{font-weight:700;color:var(--gold);font-size:1.05rem}
+  .prob{font-weight:700;font-size:1.1rem}
+  .prob.high{color:var(--green)}
+  .prob.mid{color:var(--gold)}
+  .prob.low{color:var(--muted)}
+  
+  /* Prop row */
+  .prop-row{display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+  .prop-row:last-child{border-bottom:none}
+  .stat-label{color:var(--muted);min-width:50px;font-size:0.85rem;text-transform:uppercase}
+  .line{color:var(--text);font-weight:600;min-width:45px}
+  .avg{color:var(--muted);font-size:0.9rem;min-width:60px}
+  .pick{padding:4px 10px;border-radius:4px;font-weight:600;font-size:0.85rem}
+  .pick.over{background:rgba(39,174,96,0.2);color:var(--green)}
+  .pick.under{background:rgba(231,76,60,0.2);color:var(--red)}
+  
+  /* No data */
+  .muted{color:var(--muted);font-size:0.9rem}
+  .no-data{text-align:center;padding:40px;color:var(--muted)}
+  
+  /* Error */
+  .error{background:rgba(231,76,60,0.1);border:1px solid var(--red);color:var(--red);padding:12px;border-radius:6px;margin-bottom:12px}
+  .error button{margin-left:12px;padding:4px 10px;background:var(--red);border:none;border-radius:4px;color:#fff;cursor:pointer}
+  
+  /* Footer */
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--border);text-align:center;color:var(--muted);font-size:0.8rem}
+  
+  /* Responsive */
+  @media(max-width:600px){
+    .tabs{flex-direction:column}
+    .tab{width:100%}
+    .filter-bar{flex-direction:column;align-items:stretch}
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>NBA Edge Finder</h1>
-            <p class="subtitle">Ultra-light prop analysis</p>
-            <div class="status-bar">
-                <span id="updateTime">Loading...</span>
-                <span id="propCount">0 props</span>
-            </div>
-        </header>
+<h1>NBA Edge Finder</h1>
+<div id="proof" class="muted">Loading...</div>
 
-        <!-- Accessible Tab Navigation -->
-        <nav class="tabs" role="tablist" aria-label="Stat categories">
-            <button 
-                role="tab" 
-                id="tab-pts" 
-                aria-selected="true" 
-                aria-controls="panel-pts"
-                tabindex="0"
-                data-stat="pts"
-                class="tab active">
-                Points
-            </button>
-            <button 
-                role="tab" 
-                id="tab-reb" 
-                aria-selected="false" 
-                aria-controls="panel-reb"
-                tabindex="-1"
-                data-stat="reb"
-                class="tab">
-                Rebounds
-            </button>
-            <button 
-                role="tab" 
-                id="tab-ast" 
-                aria-selected="false" 
-                aria-controls="panel-ast"
-                tabindex="-1"
-                data-stat="ast"
-                class="tab">
-                Assists
-            </button>
-            <button 
-                role="tab" 
-                id="tab-all" 
-                aria-selected="false" 
-                aria-controls="panel-all"
-                tabindex="-1"
-                data-stat="all"
-                class="tab">
-                All Props
-            </button>
-        </nav>
+<!-- Error banner (hidden by default) -->
+<div id="error" class="error" hidden>
+  <span id="error-text">Error loading data</span>
+  <button onclick="retryLoad()">Retry</button>
+</div>
 
-        <!-- Probability Filter -->
-        <div class="filter-bar">
-            <label for="minProb">Min Probability:</label>
-            <select id="minProb">
-                <option value="0">All</option>
-                <option value="60">60%+</option>
-                <option value="70" selected>70%+</option>
-                <option value="80">80%+</option>
-            </select>
+<!-- Tablist for stat categories -->
+<div id="tabs" class="tabs" role="tablist" aria-label="Stat categories">
+  <button role="tab" aria-selected="true" id="tab-pts" data-stat="pts" class="tab" tabindex="0">Points</button>
+  <button role="tab" aria-selected="false" id="tab-reb" data-stat="reb" class="tab" tabindex="-1">Rebounds</button>
+  <button role="tab" aria-selected="false" id="tab-ast" data-stat="ast" class="tab" tabindex="-1">Assists</button>
+  <button role="tab" aria-selected="false" id="tab-all" data-stat="all" class="tab" tabindex="-1">All Props</button>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <label for="minProb">Min Probability:</label>
+  <select id="minProb">
+    <option value="0">All</option>
+    <option value="60">60%+</option>
+    <option value="70" selected>70%+</option>
+    <option value="80">80%+</option>
+  </select>
+</div>
+
+<!-- Main content panel -->
+<main id="panel" tabindex="0" role="region" aria-live="polite">
+  <div id="panel-content"><div class="muted"><span class="spinner"></span> Loading props...</div></div>
+</main>
+
+<footer>
+  Data updates every 15 minutes via GitHub Actions<br>
+  <small>Press Tab to navigate, Arrow keys between tabs, Enter to select</small>
+</footer>
+
+<script>
+/*
+  NBA Edge Finder — Ultra-light client
+  - Fetch props once, filter by stat type
+  - AbortController to cancel in-flight fetches
+  - In-memory + localStorage cache with TTL
+  - Keyboard navigation for tabs
+  - Poll for updates every 15s while focused
+*/
+
+const CONFIG = {
+  PROPS_URL: '/api/props',        // FastAPI endpoint (or /data/props.json)
+  CACHE_TTL_MS: 60000,            // 60 seconds
+  POLL_INTERVAL_MS: 15000,        // 15 seconds
+  STALE_THRESHOLD_MS: 300000      // 5 minutes = stale
+};
+
+const state = {
+  propsData: null,
+  cache: new Map(),
+  currentAbort: null,
+  currentStat: 'pts',
+  minProb: 70,
+  pollTimer: null
+};
+
+// === Utilities ===
+function pretty(n) { return typeof n === 'number' ? n.toFixed(1) : n; }
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return 'unknown';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hours = Math.floor(mins / 60);
+  return hours + 'h ago';
+}
+
+// === Cache ===
+function cacheStore(key, data) {
+  const item = { ts: Date.now(), data };
+  state.cache.set(key, item);
+  try {
+    localStorage.setItem('nba_' + key, JSON.stringify(item));
+  } catch(e) { /* localStorage full */ }
+}
+
+function cacheLoad(key) {
+  // Memory first
+  const mem = state.cache.get(key);
+  if (mem && (Date.now() - mem.ts) < CONFIG.CACHE_TTL_MS) return mem.data;
+  
+  // localStorage fallback
+  try {
+    const raw = localStorage.getItem('nba_' + key);
+    if (raw) {
+      const item = JSON.parse(raw);
+      if ((Date.now() - item.ts) < CONFIG.CACHE_TTL_MS) {
+        state.cache.set(key, item);
+        return item.data;
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+
+// === Fetch with AbortController ===
+function abortExisting() {
+  if (state.currentAbort) {
+    state.currentAbort.abort();
+    state.currentAbort = null;
+  }
+}
+
+async function fetchProps(force = false) {
+  const cacheKey = 'props';
+  
+  // Check cache
+  if (!force) {
+    const cached = cacheLoad(cacheKey);
+    if (cached) {
+      console.log('Cache hit');
+      return cached;
+    }
+  }
+  
+  // Abort any existing fetch
+  abortExisting();
+  const controller = new AbortController();
+  state.currentAbort = controller;
+  
+  try {
+    const res = await fetch(CONFIG.PROPS_URL, {
+      signal: controller.signal,
+      cache: 'no-cache'
+    });
+    
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    
+    const data = await res.json();
+    cacheStore(cacheKey, data);
+    
+    if (state.currentAbort === controller) {
+      state.currentAbort = null;
+    }
+    
+    return data;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('Fetch aborted');
+      return null;
+    }
+    throw err;
+  }
+}
+
+// === UI Updates ===
+function showLoading() {
+  document.getElementById('panel-content').innerHTML = 
+    '<div class="muted"><span class="spinner"></span> Loading props...</div>';
+}
+
+function showError(msg) {
+  document.getElementById('error').hidden = false;
+  document.getElementById('error-text').textContent = msg;
+}
+
+function hideError() {
+  document.getElementById('error').hidden = true;
+}
+
+function updateStatus(data) {
+  const el = document.getElementById('proof');
+  if (!data) {
+    el.textContent = 'Unable to load data';
+    el.classList.add('stale');
+    return;
+  }
+  
+  const updated = data.updated ? timeAgo(data.updated) : 'unknown';
+  const count = data.count || 0;
+  el.textContent = `${count} players loaded — Updated ${updated}`;
+  
+  // Check staleness
+  if (data.updated) {
+    const age = Date.now() - new Date(data.updated).getTime();
+    el.classList.toggle('stale', age > CONFIG.STALE_THRESHOLD_MS);
+  }
+}
+
+function setSelectedTab(stat) {
+  document.querySelectorAll('[role=tab]').forEach(t => {
+    const isSelected = t.dataset.stat === stat;
+    t.setAttribute('aria-selected', isSelected);
+    t.tabIndex = isSelected ? 0 : -1;
+  });
+}
+
+// === Rendering ===
+function renderProps(data, stat) {
+  const el = document.getElementById('panel-content');
+  
+  if (!data || !data.props || data.props.length === 0) {
+    el.innerHTML = '<div class="no-data">No props available</div>';
+    return;
+  }
+  
+  let props = data.props;
+  
+  // Filter by stat type
+  if (stat !== 'all') {
+    props = props.filter(p => p.props && p.props[stat]);
+  }
+  
+  // Filter by min probability
+  const minProb = state.minProb;
+  props = props.filter(p => {
+    if (stat === 'all') {
+      return Object.values(p.props || {}).some(s => s.prob >= minProb);
+    }
+    return p.props?.[stat]?.prob >= minProb;
+  });
+  
+  // Sort by probability (highest first)
+  props.sort((a, b) => {
+    const getProb = (p) => {
+      if (stat === 'all') {
+        return Math.max(...Object.values(p.props || {}).map(s => s.prob || 0));
+      }
+      return p.props?.[stat]?.prob || 0;
+    };
+    return getProb(b) - getProb(a);
+  });
+  
+  if (props.length === 0) {
+    el.innerHTML = '<div class="no-data">No props match current filters</div>';
+    return;
+  }
+  
+  // Render cards
+  const cards = props.map(p => {
+    if (stat === 'all') {
+      // All stats view
+      const rows = Object.entries(p.props || {}).map(([st, d]) => `
+        <div class="prop-row">
+          <span class="stat-label">${st}</span>
+          <span class="line">${d.line}</span>
+          <span class="avg">avg: ${d.avg}</span>
+          <span class="pick ${d.pick.toLowerCase()}">${d.pick}</span>
+          <span class="prob ${d.prob >= 70 ? 'high' : d.prob >= 60 ? 'mid' : 'low'}">${d.prob}%</span>
         </div>
-
-        <!-- Loading Spinner -->
-        <div id="spinner" class="spinner" hidden aria-live="polite">
-            <div class="spinner-icon"></div>
-            <span>Loading props...</span>
+      `).join('');
+      
+      return `
+        <div class="card">
+          <div class="card-header">
+            <span class="player-name">${escapeHtml(p.player)}</span>
+          </div>
+          ${rows}
         </div>
-
-        <!-- Error/Stale Banner -->
-        <div id="errorBanner" class="error-banner" hidden role="alert">
-            <span id="errorText">Data may be stale. Last update: unknown</span>
-            <button onclick="refreshData()" class="retry-btn">Retry</button>
+      `;
+    }
+    
+    // Single stat view
+    const d = p.props?.[stat];
+    if (!d) return '';
+    
+    const probClass = d.prob >= 70 ? 'high' : d.prob >= 60 ? 'mid' : 'low';
+    
+    return `
+      <div class="card ${d.prob >= 70 ? 'high-prob' : ''}">
+        <div class="card-header">
+          <span class="player-name">${escapeHtml(p.player)}</span>
+          <span class="prob ${probClass}">${d.prob}%</span>
         </div>
+        <div class="prop-row">
+          <span class="stat-label">${stat}</span>
+          <span class="line">${d.line}</span>
+          <span class="avg">avg: ${d.avg}</span>
+          <span class="pick ${d.pick.toLowerCase()}">${d.pick}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  el.innerHTML = cards || '<div class="no-data">No props to display</div>';
+}
 
-        <!-- Tab Panels -->
-        <main>
-            <section 
-                role="tabpanel" 
-                id="panel-pts" 
-                aria-labelledby="tab-pts"
-                class="panel active">
-                <div id="content-pts" class="props-grid"></div>
-            </section>
-            <section 
-                role="tabpanel" 
-                id="panel-reb" 
-                aria-labelledby="tab-reb"
-                class="panel"
-                hidden>
-                <div id="content-reb" class="props-grid"></div>
-            </section>
-            <section 
-                role="tabpanel" 
-                id="panel-ast" 
-                aria-labelledby="tab-ast"
-                class="panel"
-                hidden>
-                <div id="content-ast" class="props-grid"></div>
-            </section>
-            <section 
-                role="tabpanel" 
-                id="panel-all" 
-                aria-labelledby="tab-all"
-                class="panel"
-                hidden>
-                <div id="content-all" class="props-grid"></div>
-            </section>
-        </main>
+// === Data Loading ===
+async function loadAndRender(force = false) {
+  hideError();
+  
+  // Show cached data immediately if available
+  const cached = cacheLoad('props');
+  if (cached && !force) {
+    state.propsData = cached;
+    updateStatus(cached);
+    renderProps(cached, state.currentStat);
+  } else {
+    showLoading();
+  }
+  
+  try {
+    const data = await fetchProps(force);
+    if (data) {
+      state.propsData = data;
+      updateStatus(data);
+      renderProps(data, state.currentStat);
+    }
+  } catch (err) {
+    console.error('Load error:', err);
+    showError('Failed to load: ' + err.message);
+    
+    // Show stale cache if available
+    if (cached) {
+      state.propsData = cached;
+      updateStatus(cached);
+      renderProps(cached, state.currentStat);
+    }
+  }
+}
 
-        <footer>
-            <p>Data updates every 15 minutes via GitHub Actions</p>
-            <p><small>Press Tab to navigate, Enter to select</small></p>
-        </footer>
-    </div>
+function retryLoad() {
+  loadAndRender(true);
+}
 
-    <script src="/static/app.js"></script>
+// === Tab Handling ===
+function onTabClick(e) {
+  const stat = e.currentTarget.dataset.stat;
+  state.currentStat = stat;
+  setSelectedTab(stat);
+  
+  // Re-render with current data (no new fetch needed)
+  if (state.propsData) {
+    renderProps(state.propsData, stat);
+  } else {
+    loadAndRender();
+  }
+}
+
+function onTabKeydown(e) {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const tabs = Array.from(document.querySelectorAll('[role=tab]'));
+    const idx = tabs.indexOf(e.target);
+    const next = e.key === 'ArrowRight' 
+      ? tabs[idx + 1] || tabs[0] 
+      : tabs[idx - 1] || tabs[tabs.length - 1];
+    next.focus();
+    next.click();
+    e.preventDefault();
+  }
+}
+
+// === Polling ===
+function startPoll() {
+  stopPoll();
+  state.pollTimer = setInterval(() => {
+    if (!document.hidden) {
+      console.log('Auto-refresh...');
+      loadAndRender(true);
+    }
+  }, CONFIG.POLL_INTERVAL_MS);
+}
+
+function stopPoll() {
+  if (state.pollTimer) {
+    clearInterval(state.pollTimer);
+    state.pollTimer = null;
+  }
+}
+
+// === Initialization ===
+function init() {
+  console.log('NBA Edge Finder initializing...');
+  
+  // Tab click handlers
+  document.querySelectorAll('[role=tab]').forEach(tab => {
+    tab.addEventListener('click', onTabClick);
+    tab.addEventListener('keydown', onTabKeydown);
+  });
+  
+  // Filter change handler
+  document.getElementById('minProb').addEventListener('change', (e) => {
+    state.minProb = parseInt(e.target.value, 10);
+    if (state.propsData) {
+      renderProps(state.propsData, state.currentStat);
+    }
+  });
+  
+  // Visibility change for polling
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopPoll();
+    } else {
+      startPoll();
+      loadAndRender(true);  // Refresh when returning
+    }
+  });
+  
+  // Initial load
+  loadAndRender();
+  startPoll();
+  
+  console.log('NBA Edge Finder ready');
+}
+
+// Start
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
 </body>
 </html>
