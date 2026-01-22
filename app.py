@@ -547,7 +547,7 @@ def index():
         should_trigger_load = len(MARKET_PROJECTIONS) == 0
         
         if should_trigger_load:
-            print(f"WARNING: Only {len(MARKET_PROJECTIONS)} players loaded. Triggering background load...")
+            print(f"INFO: No players loaded yet. Triggering background load...")
             import threading
             import time
             def background_load():
