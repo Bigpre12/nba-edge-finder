@@ -670,18 +670,40 @@
             if (totalPlayersEl) totalPlayersEl.textContent = data.total_players_loaded || 0;
             if (filteredCountEl) filteredCountEl.textContent = data.edges?.length || 0;
             
-            // Update edges
-            const edgesContainer = document.getElementById('edgesContainer');
+            // Update edges with pagination
             const edges = data.edges || [];
+            allEdges = edges; // Store for pagination
+            const edgesContainer = document.getElementById('edgesContainer');
             const showing70Plus = data.showing_70_plus_only !== false;
             
             if (edges.length > 0) {
+                // Reset to page 1 if we have new data (different length)
+                if (allEdges.length !== edges.length) {
+                    currentPage = 1;
+                }
+                
+                const totalPages = Math.ceil(edges.length / itemsPerPage);
+                currentPage = Math.min(currentPage, totalPages || 1);
+                
+                const startIdx = (currentPage - 1) * itemsPerPage;
+                const endIdx = startIdx + itemsPerPage;
+                const pageEdges = edges.slice(startIdx, endIdx);
+                
                 edgesContainer.innerHTML = `
                     <div class="edges-section">
-                        <h2>${showing70Plus ? '70%+ PROBABILITY PROPS' : 'ALL EDGES'} (<span id="edgeCount">${edges.length}</span>)</h2>
+                        <div class="section-header">
+                            <h2>${showing70Plus ? '70%+ PROBABILITY PROPS' : 'ALL EDGES'} (<span id="edgeCount">${edges.length}</span>)</h2>
+                            ${totalPages > 1 ? `
+                            <div class="pagination-controls">
+                                <button onclick="previousPage()" id="prevBtn" class="page-btn" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
+                                <span id="pageInfo">Page ${currentPage} of ${totalPages} (${startIdx + 1}-${Math.min(endIdx, edges.length)} of ${edges.length})</span>
+                                <button onclick="nextPage()" id="nextBtn" class="page-btn" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+                            </div>
+                            ` : ''}
+                        </div>
                         ${showing70Plus ? '<p class="section-subtitle">Only showing props with 70%+ hit probability from all active NBA players</p>' : '<p class="section-subtitle">Showing all edges (including below 70%)</p>'}
                         <div class="edges-grid" id="edgesGrid">
-                            ${edges.map(edge => {
+                            ${pageEdges.map(edge => {
                                 const streakBadge = edge.streak && edge.streak.active 
                                     ? `<div class="streak-badge streak-${edge.streak.streak_type.toLowerCase()}">🔥 ${edge.streak.streak_count}-game ${edge.streak.streak_type} streak</div>`
                                     : '';
@@ -1728,7 +1750,9 @@
             // Refresh status every minute
             setInterval(loadDailyUpdateStatus, 60000);
             // Auto-refresh edges every 30 seconds to catch background updates
-            setInterval(refreshData, 30000);
+            setInterval(() => {
+                refreshData();
+            }, 30000);
             // Load glitched props scan status
             loadGlitchedScanStatus();
             // Refresh scan status every 5 minutes
