@@ -181,7 +181,7 @@ def save_projections(projections):
         # No longer adding default players - save what we have
         
         file_path = os.path.abspath(PROJECTIONS_FILE)
-        print(f"💾 Saving {len(projections)} players to: {file_path}")
+        print(f"Saving {len(projections)} players to: {file_path}")
         
         with open(PROJECTIONS_FILE, 'w') as f:
             json.dump(projections, f, indent=2)
@@ -206,16 +206,25 @@ def save_projections(projections):
         return False
 
 # Load projections immediately on startup (not lazy - we want it ready)
-MARKET_PROJECTIONS = load_projections()
-print(f"Startup: Loaded {len(MARKET_PROJECTIONS)} players from projections file")
-
-# If no players loaded, note that background load will start on first request
-# Don't start loading here - let the index route handle it to avoid duplicate loads
-# This prevents memory issues and ensures proper coordination
-if len(MARKET_PROJECTIONS) == 0:
-    print("INFO: No players found in projections file - background load will start on first request")
-else:
-    print(f"SUCCESS: App ready with {len(MARKET_PROJECTIONS)} players loaded!")
+# Wrap in try/except to prevent worker crashes during initialization
+try:
+    MARKET_PROJECTIONS = load_projections()
+    print(f"Startup: Loaded {len(MARKET_PROJECTIONS)} players from projections file")
+    
+    # If no players loaded, note that background load will start on first request
+    # Don't start loading here - let the index route handle it to avoid duplicate loads
+    # This prevents memory issues and ensures proper coordination
+    if len(MARKET_PROJECTIONS) == 0:
+        print("INFO: No players found in projections file - background load will start on first request")
+    else:
+        print(f"SUCCESS: App ready with {len(MARKET_PROJECTIONS)} players loaded!")
+except Exception as e:
+    print(f"ERROR: Failed to load projections during startup: {e}", file=sys.stderr)
+    import traceback
+    traceback.print_exc(file=sys.stderr)
+    # Initialize with empty dict to prevent crashes
+    MARKET_PROJECTIONS = {}
+    print("WARNING: Starting with empty projections - app will attempt to load players on first request")
 
 def get_market_projections(force_reload=False):
     """Get current projections, reloading if requested."""
