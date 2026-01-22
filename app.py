@@ -245,8 +245,16 @@ def get_market_projections(force_reload=False):
     """Get current projections, reloading if requested."""
     global MARKET_PROJECTIONS
     if force_reload:
-        MARKET_PROJECTIONS = load_projections()
-        print(f"Reloaded {len(MARKET_PROJECTIONS)} players from projections file")
+        file_projections = load_projections()
+        # Only overwrite if file has data OR memory is empty
+        # This prevents losing in-memory data when file doesn't persist (ephemeral filesystem)
+        if file_projections and len(file_projections) > 0:
+            MARKET_PROJECTIONS = file_projections
+            print(f"Reloaded {len(MARKET_PROJECTIONS)} players from projections file")
+        elif len(MARKET_PROJECTIONS) > 0:
+            print(f"File empty but keeping {len(MARKET_PROJECTIONS)} players in memory")
+        else:
+            print("No players in file or memory")
     return MARKET_PROJECTIONS
 
 # Initialize scheduler for daily updates (only start if not already running)
