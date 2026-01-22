@@ -36,10 +36,6 @@ proc_name = "thepropauditor"
 preload_app = False
 
 # Better error handling
-def on_exit(server, worker):
-    """Called just after a worker has been exited."""
-    print(f"Worker {worker.pid} exited")
-
 def worker_abort(worker):
     """Called when a worker receives the SIGABRT signal."""
     print(f"Worker {worker.pid} received SIGABRT - aborting gracefully")
