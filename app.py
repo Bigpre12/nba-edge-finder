@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import json
 import os
 import atexit
@@ -28,6 +28,26 @@ try:
 except ImportError as e:
     print(f"CRITICAL: Failed to import glitched_props: {e}", file=sys.stderr)
     sys.exit(1)
+
+try:
+    from bet_tracker import (
+        add_bet, settle_bet, update_closing_odds, get_yesterdays_bets,
+        get_todays_bets, get_pending_bets, get_recent_bets, calculate_roi,
+        delete_bet, get_all_bets, get_bets_by_date
+    )
+except ImportError as e:
+    print(f"Warning: Failed to import bet_tracker: {e}")
+    # Create stub functions if bet_tracker fails
+    def add_bet(*args, **kwargs): return None
+    def settle_bet(*args, **kwargs): return None
+    def get_yesterdays_bets(): return []
+    def get_todays_bets(): return []
+    def get_pending_bets(): return []
+    def get_recent_bets(days=7): return []
+    def calculate_roi(bets): return {}
+    def delete_bet(bet_id): return False
+    def get_all_bets(): return []
+    def get_bets_by_date(date_str): return []
 
 try:
     from glitched_props_scanner import scan_active_players_for_glitches, get_scan_status
@@ -1389,6 +1409,203 @@ def api_glitched_scan_status():
             'success': False,
             'error': str(e)
             }), 500
+
+
+# ============================================================================
+# BET TRACKING API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/bets', methods=['GET', 'POST'])
+@requires_auth
+def api_bets():
+    """API endpoint for bet management."""
+    if request.method == 'GET':
+        # Get bets with optional filters
+        date_filter = request.args.get('date')  # YYYY-MM-DD
+        filter_type = request.args.get('filter', 'all')  # all, yesterday, today, pending, recent
+        
+        try:
+            if date_filter:
+                bets = get_bets_by_date(date_filter)
+            elif filter_type == 'yesterday':
+                bets = get_yesterdays_bets()
+            elif filter_type == 'today':
+                bets = get_todays_bets()
+            elif filter_type == 'pending':
+                bets = get_pending_bets()
+            elif filter_type == 'recent':
+                days = int(request.args.get('days', 7))
+                bets = get_recent_bets(days)
+            else:
+                bets = get_all_bets()
+            
+            # Sort by time placed (newest first)
+            bets = sorted(bets, key=lambda x: x.get('time_placed', ''), reverse=True)
+            
+            # Calculate ROI stats
+            roi_stats = calculate_roi(bets)
+            
+            return jsonify({
+                'success': True,
+                'bets': bets,
+                'stats': roi_stats
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    elif request.method == 'POST':
+        # Add new bet
+        try:
+            data = request.get_json()
+            
+            bet = add_bet(
+                player=data.get('player'),
+                prop_type=data.get('prop_type', 'PTS'),
+                line=float(data.get('line')),
+                pick=data.get('pick'),  # OVER or UNDER
+                odds_placed=int(data.get('odds_placed', -110)),
+                stake=float(data.get('stake', 100)),
+                platform=data.get('platform', 'Unknown'),
+                confidence_grade=data.get('confidence_grade'),
+                confidence_score=data.get('confidence_score')
+            )
+            
+            if bet:
+                return jsonify({
+                    'success': True,
+                    'message': 'Bet added successfully',
+                    'bet': bet
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to add bet'
+                }), 500
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+
+@app.route('/api/bets/<bet_id>', methods=['PUT', 'DELETE'])
+@requires_auth
+def api_bet_detail(bet_id):
+    """API endpoint for individual bet operations."""
+    if request.method == 'PUT':
+        # Settle or update a bet
+        try:
+            data = request.get_json()
+            
+            if 'actual_stat' in data:
+                # Settle the bet
+                bet = settle_bet(
+                    bet_id=bet_id,
+                    actual_stat=float(data.get('actual_stat')),
+                    closing_odds=int(data.get('closing_odds')) if data.get('closing_odds') else None
+                )
+            elif 'closing_odds' in data:
+                # Just update closing odds
+                bet = update_closing_odds(bet_id, int(data.get('closing_odds')))
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Must provide actual_stat or closing_odds'
+                }), 400
+            
+            if bet:
+                return jsonify({
+                    'success': True,
+                    'message': 'Bet updated successfully',
+                    'bet': bet
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Bet not found'
+                }), 404
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    elif request.method == 'DELETE':
+        # Delete a bet
+        try:
+            if delete_bet(bet_id):
+                return jsonify({
+                    'success': True,
+                    'message': 'Bet deleted successfully'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Bet not found'
+                }), 404
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+
+@app.route('/api/bets/yesterday')
+@requires_auth
+def api_yesterdays_bets():
+    """Get yesterday's bets with ROI calculation."""
+    try:
+        bets = get_yesterdays_bets()
+        bets = sorted(bets, key=lambda x: x.get('time_placed', ''), reverse=True)
+        roi_stats = calculate_roi(bets)
+        
+        return jsonify({
+            'success': True,
+            'date': (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
+            'bets': bets,
+            'stats': roi_stats
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/yesterdays-bets')
+@requires_auth
+def yesterdays_bets_page():
+    """Yesterday's Bets page - receipts only, no marketing."""
+    try:
+        bets = get_yesterdays_bets()
+        bets = sorted(bets, key=lambda x: x.get('time_placed', ''), reverse=True)
+        roi_stats = calculate_roi(bets)
+        yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        return render_template('yesterdays_bets.html',
+                             bets=bets,
+                             stats=roi_stats,
+                             date=yesterday_date)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return render_template('yesterdays_bets.html',
+                             bets=[],
+                             stats={},
+                             date=(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
+                             error=str(e))
+
 
 if __name__ == '__main__':
     # Development mode

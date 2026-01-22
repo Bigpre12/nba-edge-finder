@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yesterday's Bets | {{ date }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            border-bottom: 1px solid #333;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .header h1 {
+            font-size: 1.5em;
+            color: #fff;
+            margin: 0 0 8px 0;
+            font-weight: 500;
+        }
+        
+        .header .date {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .nav-link {
+            color: #888;
+            text-decoration: none;
+            font-size: 0.85em;
+        }
+        
+        .nav-link:hover {
+            color: #ffd700;
+        }
+        
+        /* Stats Summary */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            background: #111;
+            border: 1px solid #222;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .stat-value.positive { color: #27ae60; }
+        .stat-value.negative { color: #e74c3c; }
+        .stat-value.neutral { color: #888; }
+        
+        .stat-label {
+            font-size: 0.7em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        
+        /* Bets Table */
+        .bets-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+        
+        .bets-table th {
+            text-align: left;
+            padding: 12px 8px;
+            border-bottom: 1px solid #333;
+            color: #666;
+            font-weight: 500;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .bets-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #1a1a1a;
+            vertical-align: middle;
+        }
+        
+        .bets-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        /* Result badges */
+        .result-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-weight: 600;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+        
+        .result-win {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+        
+        .result-loss {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        .result-push {
+            background: rgba(136, 136, 136, 0.2);
+            color: #888;
+        }
+        
+        .result-pending {
+            background: rgba(243, 156, 18, 0.2);
+            color: #f39c12;
+        }
+        
+        /* Pick badge */
+        .pick-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        
+        .pick-over {
+            background: rgba(39, 174, 96, 0.15);
+            color: #27ae60;
+        }
+        
+        .pick-under {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+        
+        /* Odds display */
+        .odds {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .odds-placed { color: #fff; }
+        .odds-closing { color: #666; }
+        .odds-better { color: #27ae60; }
+        .odds-worse { color: #e74c3c; }
+        
+        /* Money */
+        .money {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .money.positive { color: #27ae60; }
+        .money.negative { color: #e74c3c; }
+        
+        /* ROI */
+        .roi-display {
+            font-weight: 600;
+        }
+        
+        /* Grade */
+        .grade {
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        
+        .grade-aplus, .grade-a { background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+        .grade-aminus, .grade-bplus { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+        .grade-b, .grade-bminus { background: rgba(52, 152, 219, 0.15); color: #5dade2; }
+        .grade-cplus, .grade-c, .grade-cminus { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+        .grade-d, .grade-f { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state h2 {
+            color: #888;
+            font-weight: 400;
+            margin-bottom: 8px;
+        }
+        
+        /* Time */
+        .time-placed {
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        /* Actual stat */
+        .actual-stat {
+            color: #fff;
+            font-weight: 600;
+        }
+        
+        /* Prop line */
+        .prop-line {
+            color: #888;
+        }
+        
+        /* CLV indicator */
+        .clv-indicator {
+            font-size: 0.75em;
+            margin-left: 4px;
+        }
+        
+        .clv-positive { color: #27ae60; }
+        .clv-negative { color: #e74c3c; }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .bets-table {
+                font-size: 0.75em;
+            }
+            
+            .bets-table th, .bets-table td {
+                padding: 8px 4px;
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 16px;
+            border-top: 1px solid #222;
+            color: #444;
+            font-size: 0.75em;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="nav-link">&larr; Back to Dashboard</a>
+            <h1>Yesterday's Bets</h1>
+            <div class="date">{{ date }}</div>
+        </div>
+        
+        {% if error %}
+        <div class="error-message" style="color: #e74c3c; padding: 16px; background: rgba(231,76,60,0.1); border-radius: 4px; margin-bottom: 20px;">
+            Error: {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if stats and stats.total_bets > 0 %}
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value">{{ stats.wins }}-{{ stats.losses }}{% if stats.pushes %}-{{ stats.pushes }}{% endif %}</div>
+                <div class="stat-label">Record</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value {% if stats.win_rate >= 55 %}positive{% elif stats.win_rate < 45 %}negative{% else %}neutral{% endif %}">{{ stats.win_rate }}%</div>
+                <div class="stat-label">Win Rate</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value {% if stats.total_profit > 0 %}positive{% elif stats.total_profit < 0 %}negative{% else %}neutral{% endif %}">${{ "%.2f"|format(stats.total_profit) }}</div>
+                <div class="stat-label">Profit</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value {% if stats.roi_pct > 0 %}positive{% elif stats.roi_pct < 0 %}negative{% else %}neutral{% endif %}">{{ stats.roi_pct }}%</div>
+                <div class="stat-label">ROI</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${{ "%.2f"|format(stats.total_stake) }}</div>
+                <div class="stat-label">Wagered</div>
+            </div>
+            {% if stats.clv %}
+            <div class="stat-item">
+                <div class="stat-value {% if stats.clv > 0 %}positive{% elif stats.clv < 0 %}negative{% else %}neutral{% endif %}">{{ stats.clv }}%</div>
+                <div class="stat-label">CLV</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if bets %}
+        <table class="bets-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Prop</th>
+                    <th>Pick</th>
+                    <th>Odds (Placed)</th>
+                    <th>Odds (Close)</th>
+                    <th>Stake</th>
+                    <th>Result</th>
+                    <th>Actual</th>
+                    <th>P/L</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bet in bets %}
+                <tr>
+                    <td class="time-placed">{{ bet.time_placed.split(' ')[1][:5] if bet.time_placed else '-' }}</td>
+                    <td>
+                        <div style="color: #fff;">{{ bet.player }}</div>
+                        <div class="prop-line">{{ bet.prop_type }} {{ bet.line }}</div>
+                    </td>
+                    <td>
+                        <span class="pick-badge pick-{{ bet.pick|lower }}">{{ bet.pick }}</span>
+                        {% if bet.confidence_grade %}
+                        <span class="grade grade-{{ bet.confidence_grade|lower|replace('+', 'plus')|replace('-', 'minus') }}">{{ bet.confidence_grade }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="odds odds-placed">{{ bet.odds_placed if bet.odds_placed else '-110' }}</td>
+                    <td class="odds">
+                        {% if bet.odds_closing %}
+                            {% if bet.odds_closing < bet.odds_placed %}
+                            <span class="odds-better">{{ bet.odds_closing }}</span>
+                            <span class="clv-indicator clv-positive">+CLV</span>
+                            {% elif bet.odds_closing > bet.odds_placed %}
+                            <span class="odds-worse">{{ bet.odds_closing }}</span>
+                            <span class="clv-indicator clv-negative">-CLV</span>
+                            {% else %}
+                            <span class="odds-closing">{{ bet.odds_closing }}</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="odds-closing">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="money">${{ "%.0f"|format(bet.stake) }}</td>
+                    <td>
+                        {% if bet.result == 'WIN' %}
+                        <span class="result-badge result-win">WIN</span>
+                        {% elif bet.result == 'LOSS' %}
+                        <span class="result-badge result-loss">LOSS</span>
+                        {% elif bet.result == 'PUSH' %}
+                        <span class="result-badge result-push">PUSH</span>
+                        {% else %}
+                        <span class="result-badge result-pending">PENDING</span>
+                        {% endif %}
+                    </td>
+                    <td class="actual-stat">
+                        {% if bet.actual_stat is not none %}
+                        {{ bet.actual_stat }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="money {% if bet.profit and bet.profit > 0 %}positive{% elif bet.profit and bet.profit < 0 %}negative{% endif %}">
+                        {% if bet.profit is not none %}
+                        {{ "+" if bet.profit > 0 else "" }}${{ "%.2f"|format(bet.profit) }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h2>No bets recorded</h2>
+            <p>No bets were placed on {{ date }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="footer">
+            Generated {{ now().strftime('%Y-%m-%d %H:%M:%S') if now is defined else '' }}
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh pending bets every 60 seconds
+        const hasPending = {{ 'true' if bets and bets|selectattr('result', 'none')|list|length > 0 else 'false' }};
+        if (hasPending) {
+            setTimeout(() => window.location.reload(), 60000);
+        }
+    </script>
+</body>
+</html>
