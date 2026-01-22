@@ -720,10 +720,12 @@
                                         ? `<div class="advanced-metrics"><div class="metrics-row"><span>FG%:</span> <span>${edge.advanced_metrics.fg_pct}%</span> <span>Pts/36:</span> <span>${edge.advanced_metrics.points_per_36}</span> <span>CV:</span> <span>${edge.advanced_metrics.consistency}%</span></div></div>`
                                         : '';
                                     
+                                    const playerName = edge.player || edge.player_name || 'Unknown Player';
+                                    const recommendation = edge.recommendation || 'OVER';
                                     return `
-                                    <div class="oracle-card ${edge.recommendation ? edge.recommendation.toLowerCase() : ''}">
+                                    <div class="oracle-card ${recommendation.toLowerCase()}">
                                         <div class="oracle-header-row">
-                                            <div class="oracle-player">${edge.player || 'Unknown Player'}</div>
+                                            <div class="oracle-player">${playerName}</div>
                                             ${edge.ev ? `
                                             <div class="ev-badge ${edge.ev.is_positive_ev ? 'positive-ev' : 'negative-ev'}">
                                                 EV: $${edge.ev.ev.toFixed(2)}
@@ -1529,7 +1531,18 @@
 
         // Tactical Filters Functions
         function showTacticalFilters() {
-            document.getElementById('tacticalFiltersPanel').style.display = 'block';
+            try {
+                const panel = document.getElementById('tacticalFiltersPanel');
+                if (!panel) {
+                    console.error('tacticalFiltersPanel element not found');
+                    alert('Tactical Filters panel not found. Please refresh the page.');
+                    return;
+                }
+                panel.style.display = 'block';
+            } catch (error) {
+                console.error('Error showing tactical filters:', error);
+                alert('Error opening Tactical Filters: ' + error.message);
+            }
         }
 
         function hideTacticalFilters() {

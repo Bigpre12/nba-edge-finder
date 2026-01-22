@@ -3,9 +3,20 @@
 let parlayBets = [];
 
 function showParlayCalculator() {
-    document.getElementById('parlayCalculatorModal').style.display = 'flex';
-    if (parlayBets.length === 0) {
-        addBetRow();
+    try {
+        const modal = document.getElementById('parlayCalculatorModal');
+        if (!modal) {
+            console.error('parlayCalculatorModal element not found');
+            alert('Parlay Calculator modal not found. Please refresh the page.');
+            return;
+        }
+        modal.style.display = 'flex';
+        if (parlayBets.length === 0 && typeof addBetRow === 'function') {
+            addBetRow();
+        }
+    } catch (error) {
+        console.error('Error showing parlay calculator:', error);
+        alert('Error opening Parlay Calculator: ' + error.message);
     }
 }
 
