@@ -1772,10 +1772,34 @@
             loadDailyUpdateStatus();
             // Refresh status every minute
             setInterval(loadDailyUpdateStatus, 60000);
-            // Auto-refresh edges every 30 seconds to catch background updates
+            // Track player count to detect when new players are loaded
+            let lastPlayerCount = {{ projections|length }};
+            
+            // Auto-refresh edges every 15 seconds to catch background updates faster
+            // This ensures newly loaded players appear quickly
             setInterval(() => {
-                refreshData();
-            }, 30000);
+                if (typeof refreshData === 'function') {
+                    refreshData().then((data) => {
+                        // Check if player count increased (new players loaded)
+                        const currentCount = data?.total_players_loaded || data?.projections_count || parseInt(document.getElementById('totalPlayers')?.textContent || '0');
+                        if (currentCount > lastPlayerCount && lastPlayerCount >= 0) {
+                            const newPlayers = currentCount - lastPlayerCount;
+                            console.log(`✅ New players detected! Count increased from ${lastPlayerCount} to ${currentCount}`);
+                            lastPlayerCount = currentCount;
+                            // Show a notification
+                            const notification = document.createElement('div');
+                            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 15px 20px; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px;';
+                            notification.textContent = `✅ ${newPlayers} new player${newPlayers > 1 ? 's' : ''} loaded!`;
+                            document.body.appendChild(notification);
+                            setTimeout(() => notification.remove(), 5000);
+                        } else if (currentCount !== lastPlayerCount) {
+                            lastPlayerCount = currentCount;
+                        }
+                    }).catch(err => {
+                        console.error('Error refreshing:', err);
+                    });
+                }
+            }, 15000); // Reduced to 15 seconds for faster updates
             // Load glitched props scan status
             loadGlitchedScanStatus();
             // Refresh scan status every 5 minutes
