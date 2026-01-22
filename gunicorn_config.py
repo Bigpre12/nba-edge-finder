@@ -7,6 +7,7 @@ port = os.environ.get('PORT', '5000')
 bind = f"0.0.0.0:{port}"
 
 # Worker configuration - use 1 worker to reduce crashes and memory usage
+# CRITICAL: Only 1 worker to prevent multiple worker crashes
 workers = 1
 worker_class = "sync"
 worker_connections = 1000
@@ -15,8 +16,8 @@ keepalive = 5
 graceful_timeout = 30
 
 # Worker lifecycle - restart workers after N requests to prevent memory leaks
-max_requests = 1000
-max_requests_jitter = 50
+max_requests = 500  # Lower to restart more frequently and prevent issues
+max_requests_jitter = 25
 
 # Prevent worker crashes from killing the whole app
 worker_tmp_dir = "/dev/shm"  # Use shared memory if available, falls back to /tmp
