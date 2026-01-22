@@ -419,8 +419,11 @@ def index():
                     failed_count = 0
                     
                     for i, player in enumerate(players_to_load):
-                        player_name = player['full_name']
-                        player_id = player['id']
+                        player_name = player.get('full_name', 'Unknown')
+                        player_id = player.get('id')
+                        
+                        if not player_id:
+                            continue
                         
                         try:
                             # Get season average as projection
