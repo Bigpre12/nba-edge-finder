@@ -357,6 +357,7 @@ def index():
             import threading
             import time
             def background_load():
+                global MARKET_PROJECTIONS
                 print("=" * 60)
                 print("🔄 AUTO-LOAD: Starting background load of relevant players...")
                 print("=" * 60)
@@ -428,7 +429,6 @@ def index():
                     
                     if new_projections and len(new_projections) > 3:
                         if save_projections(new_projections):
-                            global MARKET_PROJECTIONS
                             MARKET_PROJECTIONS = new_projections
                             print("=" * 60)
                             print(f"✅ SUCCESS! Loaded {len(MARKET_PROJECTIONS)} players for PTS")
