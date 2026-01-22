@@ -401,9 +401,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         track_line_changes(MARKET_PROJECTIONS)
         
         # Limit number of players to process to prevent timeout and memory issues
-        # Process max 5 players at a time for faster response and lower memory usage
+        # Process max 3 players at a time to prevent OOM on free tier (512MB)
         # This ensures the request completes within the timeout window and doesn't use too much memory
-        max_players = 5
+        max_players = 3
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
             print(f"INFO: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout (this is normal)")
@@ -599,8 +599,8 @@ def index():
                             pass
                         return
                     
-                    # Load top 30 players to reduce memory usage (reduced from 50)
-                    players_to_load = all_players[:30]
+                    # Load top 15 players to reduce memory usage (reduced from 30 to prevent OOM)
+                    players_to_load = all_players[:15]
                     print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}
@@ -635,6 +635,10 @@ def index():
                                 time.sleep(2.5)  # Medium pause every 5 players
                             else:
                                 time.sleep(1.5)  # Increased delay between players
+                            
+                            # Free memory after each player to prevent OOM
+                            import gc
+                            gc.collect()
                                 
                         except Exception as e:
                             failed_count += 1
