@@ -695,34 +695,50 @@ def api_load_all_players():
             'error': str(e)
         }), 500
 
-@app.route('/api/projections', methods=['GET', 'POST'])
+@app.route('/api/projections', methods=['GET'])
 @requires_auth
 def api_projections():
     """
-    API endpoint to get or update projections.
+    API endpoint to get current projections status.
+    Returns player count and whether only defaults are loaded.
+    """
+    try:
+        global MARKET_PROJECTIONS
+        MARKET_PROJECTIONS = get_market_projections(force_reload=True)
+        
+        default_players = list(DEFAULT_PROJECTIONS.keys())
+        current_players = list(MARKET_PROJECTIONS.keys())
+        is_default_only = len(MARKET_PROJECTIONS) <= 3 and all(p in default_players for p in current_players)
+        
+        return jsonify({
+            'count': len(MARKET_PROJECTIONS),
+            'is_default_only': is_default_only,
+            'default_players': default_players,
+            'current_players': current_players[:10],  # First 10 for preview
+            'loading_in_progress': getattr(app, '_loading_players', False)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'count': 0, 'is_default_only': True}), 500
+
+@app.route('/api/projections', methods=['POST'])
+@requires_auth
+def api_update_projections():
+    """
+    API endpoint to update projections manually.
     """
     global MARKET_PROJECTIONS
-    
-    if request.method == 'POST':
-        try:
-            data = request.get_json()
-            if 'projections' in data:
-                MARKET_PROJECTIONS = data['projections']
-                if save_projections(MARKET_PROJECTIONS):
-                    return jsonify({'success': True, 'message': 'Projections updated'})
-                else:
-                    return jsonify({'success': False, 'error': 'Failed to save'}), 500
+    try:
+        data = request.get_json()
+        if 'projections' in data:
+            MARKET_PROJECTIONS = data['projections']
+            if save_projections(MARKET_PROJECTIONS):
+                return jsonify({'success': True, 'message': 'Projections updated'})
             else:
-                return jsonify({'success': False, 'error': 'No projections provided'}), 400
-        except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    # GET request
-    MARKET_PROJECTIONS = get_market_projections()
-    return jsonify({
-        'projections': MARKET_PROJECTIONS,
-        'count': len(MARKET_PROJECTIONS)
-    })
+                return jsonify({'success': False, 'error': 'Failed to save'}), 500
+        else:
+            return jsonify({'success': False, 'error': 'No projections provided'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/line-changes')
 @requires_auth

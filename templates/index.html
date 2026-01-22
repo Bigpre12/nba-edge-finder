@@ -668,7 +668,12 @@
             // Update player count
             const totalPlayersEl = document.getElementById('totalPlayers');
             const filteredCountEl = document.getElementById('filteredCount');
-            if (totalPlayersEl) totalPlayersEl.textContent = data.total_players_loaded || 0;
+            const playerCount = data.total_players_loaded || 0;
+            if (totalPlayersEl) {
+                totalPlayersEl.textContent = playerCount;
+                // Update color based on count (green if >3, red if <=3)
+                totalPlayersEl.style.color = playerCount > 3 ? '#27ae60' : '#e74c3c';
+            }
             if (filteredCountEl) filteredCountEl.textContent = data.edges?.length || 0;
             
             // Update edges with pagination
