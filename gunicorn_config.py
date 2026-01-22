@@ -86,3 +86,13 @@ def post_fork(server, worker):
 def pre_exec(server):
     """Called just before a new master process is forked."""
     print("Master process forking")
+
+def on_exit(server, worker):
+    """Called just after a worker has been exited."""
+    print(f"Worker {worker.pid} exited")
+
+def pre_shutdown(server):
+    """Called just before the master process is shutting down."""
+    print("=" * 80)
+    print("Master process shutting down - this is normal during deployments/restarts")
+    print("=" * 80)
