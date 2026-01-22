@@ -346,12 +346,17 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
             # Suppress warning - stat might not be available for this player type
             return None
         
-        # Get the average for the season
-        avg = season_df[stat_type].mean()
-        if pd.notna(avg) and avg > 0:
+        # Get the per-game average for the season
+        # PlayerCareerStats returns season TOTALS, not per-game averages
+        # Need to divide by games played (GP) to get true average
+        games_played = season_df['GP'].values[0] if 'GP' in season_df.columns else 1
+        stat_total = season_df[stat_type].values[0] if stat_type in season_df.columns else 0
+        
+        if games_played > 0 and stat_total > 0:
+            avg = stat_total / games_played
             return round(avg, 1)
         else:
-            # Suppress warning - NaN or zero average is expected for some players
+            # Suppress warning - zero stats or no games is expected for some players
             return None
     except KeyError as e:
         player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
