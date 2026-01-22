@@ -529,8 +529,26 @@ def index():
         
         # Get edges - only 70%+ probability by default
         # This will work even if players are still loading
+        # Initialize with safe defaults first
+        edges = []
+        streaks = []
+        high_prob_props = []
+        parlay_recommendations = {}
+        error = None
+        
         try:
             edges, streaks, high_prob_props, parlay_recommendations, error = get_edges_data(show_only_70_plus=True, stat_type=stat_type)
+            # Ensure all are the correct type
+            if not isinstance(edges, list):
+                edges = []
+            if not isinstance(streaks, list):
+                streaks = []
+            if not isinstance(high_prob_props, list):
+                high_prob_props = []
+            if not isinstance(parlay_recommendations, dict):
+                parlay_recommendations = {}
+            if error is None:
+                error = None
         except Exception as e:
             print(f"Error getting edges data: {e}")
             import traceback
@@ -538,10 +556,15 @@ def index():
             edges, streaks, high_prob_props, parlay_recommendations, error = [], [], [], {}, f"Error loading edges: {str(e)}"
         
         # Get stat categories for UI - with error handling
+        # Initialize with safe defaults first
+        stat_categories = {}
+        individual_stats = {}
+        combination_stats = {}
+        
         try:
-            stat_categories = get_stat_categories()
-            individual_stats = get_individual_stats()
-            combination_stats = get_combination_stats()
+            stat_categories = get_stat_categories() or {}
+            individual_stats = get_individual_stats() or {}
+            combination_stats = get_combination_stats() or {}
         except Exception as e:
             print(f"Error getting stat categories: {e}")
             import traceback
@@ -551,9 +574,20 @@ def index():
             individual_stats = {'PTS': stat_categories['PTS']}
             combination_stats = {}
         
+        # Ensure stat_categories is a dict (not None)
+        if not isinstance(stat_categories, dict):
+            stat_categories = {}
+        if not isinstance(individual_stats, dict):
+            individual_stats = {}
+        if not isinstance(combination_stats, dict):
+            combination_stats = {}
+        
         # Get glitched props with error handling
+        glitched_props = []
         try:
-            glitched_props = get_glitched_props()
+            glitched_props = get_glitched_props() or []
+            if not isinstance(glitched_props, list):
+                glitched_props = []
         except Exception as e:
             print(f"Error loading glitched props: {e}")
             import traceback

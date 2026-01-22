@@ -28,7 +28,7 @@
                         {% endfor %}
                     </optgroup>
                 </select>
-                <span class="stat-description" id="statDescription">{{ stat_categories.get(current_stat_type, {}).get('description', '') if stat_categories else '' }}</span>
+                <span class="stat-description" id="statDescription">{% if stat_categories and current_stat_type in stat_categories %}{{ stat_categories[current_stat_type].get('description', '') }}{% endif %}</span>
             </div>
             <p class="player-count">
                 Loaded: <span id="totalPlayers" style="color: {% if projections|length > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ projections|length }}</span> relevant players | 
