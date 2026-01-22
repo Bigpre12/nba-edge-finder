@@ -5,6 +5,9 @@ from line_tracker import (
     track_line_changes, get_line_changes, add_to_chase_list, get_chase_list,
     remove_from_chase_list, add_alt_line, get_alt_lines, update_line
 )
+from glitched_props import (
+    add_glitched_prop, get_glitched_props, remove_glitched_prop, update_glitched_prop
+)
 from auth import requires_auth
 from cache_manager import clear_old_cache
 from parlay_calculator import recommend_parlays, calculate_parlay_payout, format_parlay_display

@@ -580,6 +580,78 @@
             </div>
         </div>
 
+        <div class="glitched-props-section">
+            <div class="glitched-props-header">
+                <h3>🔴 Glitched Props</h3>
+                <button onclick="showAddGlitchedPropForm()" class="btn-add-glitch">+ Add Glitched Prop</button>
+            </div>
+            <div class="table-container">
+                <table class="glitched-props-table" id="glitchedPropsTable">
+                    <thead>
+                        <tr>
+                            <th>Prop</th>
+                            <th>Reasoning</th>
+                            <th>Rating</th>
+                            <th>Platform</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="glitchedPropsTableBody">
+                        {% for prop in glitched_props %}
+                        <tr data-id="{{ prop.id }}">
+                            <td>{{ prop.prop }}</td>
+                            <td>{{ prop.reasoning }}</td>
+                            <td>
+                                <span class="rating-badge rating-{{ prop.rating }}">
+                                    {{ prop.rating }}/10
+                                </span>
+                            </td>
+                            <td>{{ prop.platform }}</td>
+                            <td>{{ prop.updated_at }}</td>
+                            <td>
+                                <button onclick="editGlitchedProp({{ prop.id }})" class="btn-edit">✏️</button>
+                                <button onclick="deleteGlitchedProp({{ prop.id }})" class="btn-delete">🗑️</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Add/Edit Glitched Prop Modal -->
+        <div id="glitchedPropModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeGlitchedPropModal()">&times;</span>
+                <h3 id="modalTitle">Add Glitched Prop</h3>
+                <form id="glitchedPropForm" onsubmit="saveGlitchedProp(event)">
+                    <input type="hidden" id="glitchedPropId" value="">
+                    <div class="form-group">
+                        <label for="glitchedPropInput">Prop:</label>
+                        <input type="text" id="glitchedPropInput" placeholder="e.g., LeBron James O 24.5 PTS" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="glitchedReasoningInput">Reasoning:</label>
+                        <textarea id="glitchedReasoningInput" placeholder="Why is this glitched? (e.g., Line is 3 points off market average)" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="glitchedRatingInput">Rating (1-10):</label>
+                        <input type="number" id="glitchedRatingInput" min="1" max="10" value="5" required>
+                        <small>10 = most glitched/valuable</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="glitchedPlatformInput">Platform:</label>
+                        <input type="text" id="glitchedPlatformInput" placeholder="e.g., PrizePicks, Underdog, DraftKings" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-save">Save</button>
+                        <button type="button" onclick="closeGlitchedPropModal()" class="btn-cancel">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <footer>
             <p>THE ORACLE | NBA API | Real-time edge detection</p>
         </footer>
@@ -940,6 +1012,11 @@
             `).join('');
             
             projectionCount.textContent = Object.keys(data.projections).length;
+
+            // Update glitched props
+            if (data.glitched_props) {
+                updateGlitchedPropsTable(data.glitched_props);
+            }
         }
 
         function filterPlayers() {
