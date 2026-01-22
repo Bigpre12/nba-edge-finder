@@ -81,4 +81,3 @@ def post_fork(server, worker):
 def pre_exec(server):
     """Called just before a new master process is forked."""
     print("Master process forking")
-    print(f"Worker {worker.pid} received SIGABRT - aborting gracefully")
