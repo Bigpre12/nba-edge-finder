@@ -31,15 +31,9 @@
                 <span class="stat-description" id="statDescription">{{ stat_categories.get(current_stat_type, {}).get('description', '') if stat_categories else '' }}</span>
             </div>
             <p class="player-count">
-                Loaded: <span id="totalPlayers" style="color: {% if projections|length > 3 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ projections|length }}</span> active players | 
+                Loaded: <span id="totalPlayers" style="color: {% if projections|length > 3 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ projections|length }}</span> relevant players | 
                 Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)
-                {% if projections|length <= 3 %}
-                <br><span style="color: #f39c12; font-size: 0.9em; display: block; margin-top: 10px; padding: 10px; background: rgba(243, 156, 18, 0.1); border-radius: 8px; border-left: 3px solid #f39c12;">
-                    ⚠️ Only {{ projections|length }} players loaded. 
-                    <br>Click <strong>"📥 Load All Active Players"</strong> button below to load 100+ players.
-                    <br><small>This takes 10-15 minutes but runs in background.</small>
-                </span>
-                {% endif %}
+                <br><small style="color: #95a5a6; font-size: 0.85em;">Auto-loading players with hot streaks, trends, and role players in background...</small>
             </p>
         </header>
 
@@ -55,7 +49,6 @@
                 <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
                 <span>Auto-refresh (60s)</span>
             </label>
-            <button onclick="loadAllActivePlayers()" class="load-players-btn" id="loadPlayersBtn">📥 Load All Active Players</button>
             <button onclick="showLineManagement()" class="line-mgmt-btn" id="lineMgmtBtn">📊 Line Management</button>
             <button onclick="showParlayCalculator()" class="parlay-btn" id="parlayBtn">🎲 Parlay Calculator</button>
             <label class="filter-toggle">
@@ -138,15 +131,6 @@
             </div>
         </div>
 
-        <div id="loadProgress" class="load-progress" style="display: none;">
-            <div class="progress-content">
-                <p id="progressText">Loading all active NBA players...</p>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <p class="progress-note">This may take several minutes due to API rate limits. Please keep this page open.</p>
-            </div>
-        </div>
 
         <div class="status-bar">
             <span id="lastUpdate">Last updated: {{ "Now" if edges else "Never" }}</span>
@@ -1646,6 +1630,96 @@
             }
         }
 
+        // Pagination state
+        let currentPage = 1;
+        const itemsPerPage = 50;
+        let allEdges = [];
+        
+        function renderEdgesWithPagination(edges) {
+            allEdges = edges;
+            const totalPages = Math.ceil(edges.length / itemsPerPage);
+            currentPage = Math.min(currentPage, totalPages || 1);
+            
+            const startIdx = (currentPage - 1) * itemsPerPage;
+            const endIdx = startIdx + itemsPerPage;
+            const pageEdges = edges.slice(startIdx, endIdx);
+            
+            const edgesContainer = document.getElementById('edgesContainer');
+            const showing70Plus = !document.getElementById('showAllToggle')?.checked;
+            
+            if (pageEdges.length > 0) {
+                edgesContainer.innerHTML = `
+                    <div class="edges-section">
+                        <div class="section-header">
+                            <h2>${showing70Plus ? '70%+ PROBABILITY PROPS' : 'ALL EDGES'} (<span id="edgeCount">${edges.length}</span>)</h2>
+                            ${totalPages > 1 ? `
+                            <div class="pagination-controls">
+                                <button onclick="previousPage()" id="prevBtn" class="page-btn" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
+                                <span id="pageInfo">Page ${currentPage} of ${totalPages} (${startIdx + 1}-${Math.min(endIdx, edges.length)} of ${edges.length})</span>
+                                <button onclick="nextPage()" id="nextBtn" class="page-btn" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <p class="section-subtitle">${showing70Plus ? 'Only showing props with 70%+ hit probability from all active NBA players' : 'Showing all edges (including below 70%)'}</p>
+                        <div class="edges-grid" id="edgesGrid">
+                            ${pageEdges.map(edge => renderEdgeCard(edge)).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                edgesContainer.innerHTML = `
+                    <div class="no-edges">
+                        <p>No edges found with current threshold.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderEdgeCard(edge) {
+            // This is a simplified version - you may need to adjust based on your actual edge structure
+            return `
+                <div class="oracle-card ${edge.recommendation?.toLowerCase() || ''}">
+                    <div class="oracle-header-row">
+                        <div class="oracle-player">${edge.player || 'N/A'}</div>
+                        ${edge.ev ? `<div class="ev-badge ${edge.ev.is_positive_ev ? 'positive-ev' : 'negative-ev'}">EV: $${edge.ev.ev?.toFixed(2) || '0.00'}</div>` : ''}
+                        ${edge.matchup_grade ? `<div class="grade-badge grade-${edge.matchup_grade.grade?.toLowerCase().replace('+', 'plus').replace('-', 'minus')}">${edge.matchup_grade.grade}</div>` : ''}
+                    </div>
+                    ${edge.oracle ? `
+                    <div class="oracle-content">
+                        <div class="oracle-line"><strong>The Line:</strong> ${edge.oracle.verdict || edge.line || 'N/A'}</div>
+                        <div class="oracle-sharp"><strong>The Sharp Angle:</strong> ${edge.oracle.sharp_angle || 'N/A'}</div>
+                        <div class="oracle-key"><strong>Key Data Point:</strong> ${edge.oracle.key_data || 'N/A'}</div>
+                        <div class="oracle-verdict"><strong>The Verdict:</strong> ${edge.oracle.verdict || 'N/A'}</div>
+                        <div class="oracle-confidence"><strong>Confidence:</strong> <span class="confidence-badge confidence-${Math.floor(edge.oracle.confidence || 1)}">${edge.oracle.confidence || 1} Units</span></div>
+                        <div class="oracle-risk"><strong>Risk Factor:</strong> ${edge.oracle.risk_factor || 'N/A'}</div>
+                    </div>
+                    ` : `
+                    <div class="edge-details">
+                        <div class="stat-row"><span class="label">Line:</span><span class="value">${edge.line || 'N/A'}</span></div>
+                        <div class="stat-row"><span class="label">L5 Avg:</span><span class="value">${edge.average || 'N/A'}</span></div>
+                        <div class="recommendation"><strong>${edge.recommendation || 'N/A'}</strong></div>
+                    </div>
+                    `}
+                    ${edge.streak && edge.streak.active ? `<div class="streak-badge streak-${edge.streak.streak_type?.toLowerCase()}">🔥 ${edge.streak.streak_count}-game ${edge.streak.streak_type} streak</div>` : ''}
+                </div>
+            `;
+        }
+        
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderEdgesWithPagination(allEdges);
+            }
+        }
+        
+        function nextPage() {
+            const totalPages = Math.ceil(allEdges.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderEdgesWithPagination(allEdges);
+            }
+        }
+
         // Initial load timestamp
         document.addEventListener('DOMContentLoaded', function() {
             const now = new Date().toLocaleString();
@@ -1653,8 +1727,8 @@
             loadDailyUpdateStatus();
             // Refresh status every minute
             setInterval(loadDailyUpdateStatus, 60000);
-            // Check projections status
-            checkProjectionsStatus();
+            // Auto-refresh edges every 30 seconds to catch background updates
+            setInterval(refreshData, 30000);
             // Load glitched props scan status
             loadGlitchedScanStatus();
             // Refresh scan status every 5 minutes
