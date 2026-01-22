@@ -398,10 +398,16 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         exclude_rotation: Exclude players with rotation changes
     """
     try:
-        # Clear old cache periodically (every 10 calls)
+        import gc
+        # Aggressive memory cleanup at start of request
+        gc.collect()
+        
+        # Clear old cache periodically (every 5 calls for better memory)
         import random
-        if random.randint(1, 10) == 1:
+        if random.randint(1, 5) == 1:
             clear_old_cache()
+            gc.collect()
+        
         from nba_engine import filter_high_probability_props, calculate_hit_probability
         
         # Track line changes before checking edges
@@ -421,9 +427,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         track_line_changes(MARKET_PROJECTIONS)
         
         # Limit number of players to process to prevent timeout and memory issues
-        # Process max 15 players at a time for better stat coverage
-        # This ensures the request completes within the timeout window
-        max_players = 15
+        # Process max 8 players at a time for free tier memory limits (512MB)
+        # This ensures the request completes without OOM kills
+        max_players = 8
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
             print(f"INFO: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout (this is normal)")
@@ -619,8 +625,9 @@ def index():
                             pass
                         return
                     
-                    # Load top 15 players to reduce memory usage (reduced from 30 to prevent OOM)
-                    players_to_load = all_players[:15]
+                    # Load top 8 players only - free tier has 512MB limit
+                    # Aggressively reduced to prevent SIGKILL from OOM
+                    players_to_load = all_players[:8]
                     print(f"Loading projections for {len(players_to_load)} players...")
                     
                     new_projections = {}
@@ -1375,8 +1382,8 @@ def api_trigger_glitched_scan():
     """Manually trigger a QUICK glitched props scan for instant results."""
     try:
         print(f"[{datetime.now()}] Manual QUICK glitched props scan triggered (instant results)...")
-        # Use quick_scan=True for instant results (top 15 players)
-        found_glitches = scan_active_players_for_glitches(quick_scan=True, max_players=15)
+        # Use quick_scan=True for instant results (reduced to 8 players for memory)
+        found_glitches = scan_active_players_for_glitches(quick_scan=True, max_players=8)
         
         return jsonify({
             'success': True,

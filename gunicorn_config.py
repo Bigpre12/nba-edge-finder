@@ -16,9 +16,9 @@ timeout = 360  # 6 minutes - must be longer than edge calculation timeout (5 min
 keepalive = 5
 graceful_timeout = 60  # Increased to 60 seconds to allow more time for graceful shutdown
 
-# Memory management - restart workers more frequently to prevent memory leaks
-max_requests = 100  # Restart after 100 requests to free memory and prevent leaks
-max_requests_jitter = 10
+# Memory management - restart workers very frequently to prevent OOM
+max_requests = 50  # Restart after 50 requests to aggressively free memory
+max_requests_jitter = 5
 
 # Prevent worker crashes from killing the whole app
 worker_tmp_dir = "/dev/shm"  # Use shared memory if available, falls back to /tmp
