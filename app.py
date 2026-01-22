@@ -311,6 +311,7 @@ def index():
     Only shows 70%+ probability props by default.
     """
     try:
+        # Wrap entire function in try/except to prevent worker crashes
         global MARKET_PROJECTIONS
         MARKET_PROJECTIONS = get_market_projections(force_reload=True)  # Always reload to get latest
         

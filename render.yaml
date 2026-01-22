@@ -3,9 +3,14 @@ services:
     name: thepropauditor
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 60 --workers 2
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --max-requests 1000 --max-requests-jitter 50 --graceful-timeout 30 --log-level info --capture-output
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: FLASK_ENV
         value: production
+      # Set these for private access (optional - leave empty for public)
+      # - key: AUTH_USERNAME
+      #   value: your_username
+      # - key: AUTH_PASSWORD
+      #   value: your_secure_password
