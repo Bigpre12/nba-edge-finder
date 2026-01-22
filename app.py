@@ -160,15 +160,30 @@ def ensure_default_projections(projections):
 
 def load_projections():
     """Load projections from file or return empty dict."""
+    file_path = os.path.abspath(PROJECTIONS_FILE)
     if os.path.exists(PROJECTIONS_FILE):
         try:
+            file_size = os.path.getsize(PROJECTIONS_FILE)
+            print(f"Found projections file: {file_path} ({file_size} bytes)")
             with open(PROJECTIONS_FILE, 'r') as f:
                 projections = json.load(f)
                 # Return loaded projections (no defaults added)
-                return projections if projections else {}
-        except Exception as e:
-            print(f"Error loading projections: {e}")
+                if projections:
+                    print(f"Loaded {len(projections)} players from {PROJECTIONS_FILE}")
+                    return projections
+                else:
+                    print(f"WARNING: Projections file exists but is empty")
+                    return {}
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Invalid JSON in projections file: {e}")
             return {}
+        except Exception as e:
+            print(f"ERROR: Error loading projections from {file_path}: {e}")
+            import traceback
+            traceback.print_exc()
+            return {}
+    else:
+        print(f"INFO: Projections file not found: {file_path}")
     return {}
 
 def save_projections(projections):
