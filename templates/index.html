@@ -12,8 +12,9 @@
 <body>
     <div class="container">
         <header>
-            <h1>THE ORACLE</h1>
+            <h1>THE ORACLE <span class="free-tier-badge">FREE TIER</span></h1>
             <p class="subtitle">Sharp angles. No fluff. Pure edge. | Showing 70%+ probability props only</p>
+            <p class="free-tier-notice">Limited to 2 players. <a href="https://render.com" target="_blank">Upgrade to unlock all features</a></p>
             <nav class="top-nav">
                 <a href="/yesterdays-bets" class="nav-link">Yesterday's Bets</a>
             </nav>
@@ -74,9 +75,9 @@
                 <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
                 <span>Auto-refresh (60s)</span>
             </label>
-            <button onclick="loadAllPlayers()" class="load-all-btn" id="loadAllBtn" title="Load ALL active NBA players (500+ players, takes 10-15 min)">📥 Load All Players</button>
+            <!-- Load All Players hidden in free tier - backend ready for upgrade -->
             <button onclick="showLineManagement()" class="line-mgmt-btn" id="lineMgmtBtn">📊 Line Management</button>
-            <button onclick="showParlayCalculator()" class="parlay-btn" id="parlayBtn">🎲 Parlay Calculator</button>
+            <!-- Parlay Calculator hidden in free tier - backend ready for upgrade -->
             <label class="filter-toggle">
                 <input type="checkbox" id="showAllToggle" onchange="toggleShowAll()">
                 <span>Show All Edges (not just 70%+)</span>
@@ -371,81 +372,7 @@
             {% endif %}
         </div>
 
-        <!-- Parlay Calculator Modal -->
-        <div id="parlayCalculatorModal" class="parlay-modal" style="display: none;">
-            <div class="parlay-modal-content">
-                <div class="parlay-modal-header">
-                    <h2>🎲 Parlay Calculator</h2>
-                    <button onclick="hideParlayCalculator()" class="close-btn">✕</button>
-                </div>
-                <div class="parlay-calculator-body">
-                    <!-- Parlay Size Tabs -->
-                    <div class="parlay-tabs">
-                        <button class="parlay-tab active" onclick="showParlayTab('2-man')">2-Man</button>
-                        <button class="parlay-tab" onclick="showParlayTab('3-man')">3-Man</button>
-                        <button class="parlay-tab" onclick="showParlayTab('4-man')">4-Man</button>
-                        <button class="parlay-tab" onclick="showParlayTab('5-man')">5-Man</button>
-                        <button class="parlay-tab" onclick="showParlayTab('6-man')">6-Man</button>
-                    </div>
-                    
-                    <!-- 2-Man Parlays -->
-                    <div id="parlay-2-man" class="parlay-tab-content active">
-                        <h3>2-Man Parlays</h3>
-                        <p class="parlay-desc">Best 2-leg combinations from high-probability props</p>
-                        <div id="parlay2ManContainer" class="parlay-container">
-                            <div class="loading-parlays">Loading recommendations...</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 3-Man Parlays -->
-                    <div id="parlay-3-man" class="parlay-tab-content">
-                        <h3>3-Man Parlays</h3>
-                        <p class="parlay-desc">Best 3-leg combinations for higher payouts</p>
-                        <div id="parlay3ManContainer" class="parlay-container">
-                            <div class="loading-parlays">Loading recommendations...</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 4-Man Parlays -->
-                    <div id="parlay-4-man" class="parlay-tab-content">
-                        <h3>4-Man Parlays</h3>
-                        <p class="parlay-desc">Best 4-leg combinations for big payouts</p>
-                        <div id="parlay4ManContainer" class="parlay-container">
-                            <div class="loading-parlays">Loading recommendations...</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 5-Man Parlays -->
-                    <div id="parlay-5-man" class="parlay-tab-content">
-                        <h3>5-Man Parlays</h3>
-                        <p class="parlay-desc">Best 5-leg combinations for massive payouts</p>
-                        <div id="parlay5ManContainer" class="parlay-container">
-                            <div class="loading-parlays">Loading recommendations...</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 6-Man Parlays -->
-                    <div id="parlay-6-man" class="parlay-tab-content">
-                        <h3>6-Man Parlays</h3>
-                        <p class="parlay-desc">Best 6-leg combinations for lottery-style payouts</p>
-                        <div id="parlay6ManContainer" class="parlay-container">
-                            <div class="loading-parlays">Loading recommendations...</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Manual Calculator -->
-                    <div class="manual-calculator">
-                        <h3>Custom Parlay Builder</h3>
-                        <div id="betsList"></div>
-                        <button onclick="addBetRow()" class="add-bet-btn">+ Add Leg</button>
-                        <button onclick="calculateCustomParlay()" class="calc-btn">Calculate</button>
-                        <div class="calculator-results">
-                            <div id="calculatorResults"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Parlay Calculator Modal - HIDDEN IN FREE TIER (backend ready for upgrade) -->
 
         <div id="highProbContainer">
             {% if high_prob_props %}
@@ -684,105 +611,9 @@
             </div>
         </div>
 
-        <div class="glitched-props-section">
-            <div class="glitched-props-header">
-                <h3>🔴 Glitched Props (Auto-Scanned 24/7)</h3>
-                <div class="glitched-props-actions">
-                    <button onclick="triggerGlitchedScan()" class="btn-scan-glitch">🔍 Run Scan Now</button>
-                    <button onclick="showAddGlitchedPropForm()" class="btn-add-glitch">+ Add Manual</button>
-                </div>
-            </div>
-            <div id="glitchedScanStatus" class="scan-status-bar">
-                <span id="scanStatusText">Loading scan status...</span>
-            </div>
-            <div class="table-container">
-                <table class="glitched-props-table" id="glitchedPropsTable">
-                    <thead>
-                        <tr>
-                            <th>Prop</th>
-                            <th>Source</th>
-                            <th>Reasoning</th>
-                            <th>Rating</th>
-                            <th>Platform</th>
-                            <th>Updated</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="glitchedPropsTableBody">
-                        {% for prop in glitched_props %}
-                        <tr data-id="{{ prop.id }}" class="{% if prop.validation and prop.validation.staleness_level == 'stale' %}row-stale{% elif prop.validation and prop.validation.staleness_level == 'warning' %}row-warning{% endif %}">
-                            <td>{{ prop.prop }}</td>
-                            <td>
-                                <span class="source-badge source-{{ prop.source|default('manual') }}">
-                                    {{ prop.source_detail|default('Manual') }}
-                                </span>
-                            </td>
-                            <td>{{ prop.reasoning }}</td>
-                            <td>
-                                <span class="rating-badge rating-{{ prop.rating }}">
-                                    {{ prop.rating }}/10
-                                </span>
-                            </td>
-                            <td>{{ prop.platform }}</td>
-                            <td class="timestamp-cell" data-timestamp="{{ prop.updated_at }}">{{ prop.updated_at }}</td>
-                            <td>
-                                {% if prop.validation %}
-                                    {% if not prop.validation.is_valid %}
-                                        <span class="status-badge status-invalid" title="{{ prop.validation.warnings|join(', ') }}">⚠️ Invalid</span>
-                                    {% elif prop.validation.staleness_level == 'stale' %}
-                                        <span class="status-badge status-stale" title="Data is over 24 hours old">🔴 Stale</span>
-                                    {% elif prop.validation.staleness_level == 'warning' %}
-                                        <span class="status-badge status-warning" title="Data is over 6 hours old">🟡 Aging</span>
-                                    {% else %}
-                                        <span class="status-badge status-fresh">🟢 Fresh</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="status-badge status-unknown">❓ Unknown</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <button onclick="editGlitchedProp({{ prop.id }})" class="btn-edit">✏️</button>
-                                <button onclick="deleteGlitchedProp({{ prop.id }})" class="btn-delete">🗑️</button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <!-- Glitched Props Section - HIDDEN IN FREE TIER (backend ready for upgrade) -->
 
-        <!-- Add/Edit Glitched Prop Modal -->
-        <div id="glitchedPropModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close" onclick="closeGlitchedPropModal()">&times;</span>
-                <h3 id="modalTitle">Add Glitched Prop</h3>
-                <form id="glitchedPropForm" onsubmit="saveGlitchedProp(event)">
-                    <input type="hidden" id="glitchedPropId" value="">
-                    <div class="form-group">
-                        <label for="glitchedPropInput">Prop:</label>
-                        <input type="text" id="glitchedPropInput" placeholder="e.g., LeBron James O 24.5 PTS" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="glitchedReasoningInput">Reasoning:</label>
-                        <textarea id="glitchedReasoningInput" placeholder="Why is this glitched? (e.g., Line is 3 points off market average)" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="glitchedRatingInput">Rating (1-10):</label>
-                        <input type="number" id="glitchedRatingInput" min="1" max="10" value="5" required>
-                        <small>10 = most glitched/valuable</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="glitchedPlatformInput">Platform:</label>
-                        <input type="text" id="glitchedPlatformInput" placeholder="e.g., PrizePicks, Underdog, DraftKings" required>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn-save">Save</button>
-                        <button type="button" onclick="closeGlitchedPropModal()" class="btn-cancel">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <!-- Glitched Prop Modal - HIDDEN IN FREE TIER (backend ready for upgrade) -->
 
         <footer>
             <p>THE ORACLE | NBA API | Real-time edge detection</p>

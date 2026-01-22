@@ -1246,6 +1246,34 @@ header h1 {
     font-style: italic;
 }
 
+/* Free Tier Badge */
+.free-tier-badge {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+    color: #fff;
+    font-size: 0.4em;
+    padding: 4px 10px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.free-tier-notice {
+    color: #888;
+    font-size: 0.85em;
+    margin: 5px 0 15px 0;
+}
+
+.free-tier-notice a {
+    color: #ffd700;
+    text-decoration: none;
+}
+
+.free-tier-notice a:hover {
+    text-decoration: underline;
+}
+
 .load-progress {
     margin: 20px 0;
     padding: 20px;
