@@ -129,6 +129,103 @@ header h1 {
     transform: none;
 }
 
+/* Probability Tier Tabs */
+.probability-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255, 215, 0, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.prob-label {
+    font-size: 0.9em;
+    color: #ffd700;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.prob-tab {
+    background: rgba(255, 255, 255, 0.05);
+    color: #d4d4d4;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 20px;
+    font-size: 0.95em;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.prob-tab:hover {
+    background: rgba(255, 215, 0, 0.1);
+    border-color: rgba(255, 215, 0, 0.3);
+    color: #fff;
+}
+
+.prob-tab.active {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    color: #000;
+    border-color: #ffd700;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+/* Numbered Pagination */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 25px 0;
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #d4d4d4;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 16px;
+    font-size: 0.9em;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 42px;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: rgba(255, 215, 0, 0.1);
+    border-color: rgba(255, 215, 0, 0.3);
+    color: #fff;
+}
+
+.page-btn.active {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    color: #000;
+    border-color: #ffd700;
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-info {
+    color: #888;
+    font-size: 0.85em;
+    padding: 0 15px;
+}
+
+.page-ellipsis {
+    color: #888;
+    padding: 0 5px;
+}
+
 .load-progress {
     margin: 20px 0;
     padding: 20px;

@@ -226,6 +226,93 @@ def get_all_active_players():
         print(f"Error fetching active players: {e}")
         return []
 
+def get_todays_games():
+    """
+    Get teams playing today using NBA API.
+    
+    Returns:
+        list: List of team abbreviations playing today
+    """
+    try:
+        from nba_api.stats.endpoints import scoreboardv2
+        from datetime import date
+        
+        today = date.today().strftime('%Y-%m-%d')
+        
+        # Try to get today's scoreboard
+        scoreboard = scoreboardv2.ScoreboardV2(game_date=today)
+        games = scoreboard.get_data_frames()[0]
+        
+        if games.empty:
+            print(f"No games found for today ({today})")
+            return []
+        
+        # Get team abbreviations
+        teams_today = set()
+        if 'HOME_TEAM_ID' in games.columns and 'VISITOR_TEAM_ID' in games.columns:
+            for _, game in games.iterrows():
+                # Get team abbreviations from IDs
+                home_team = teams.find_team_name_by_id(game['HOME_TEAM_ID'])
+                away_team = teams.find_team_name_by_id(game['VISITOR_TEAM_ID'])
+                if home_team:
+                    teams_today.add(home_team.get('abbreviation', ''))
+                if away_team:
+                    teams_today.add(away_team.get('abbreviation', ''))
+        
+        print(f"Found {len(teams_today)} teams playing today: {', '.join(teams_today)}")
+        return list(teams_today)
+    except ImportError:
+        print("scoreboardv2 not available - cannot filter by today's games")
+        return []
+    except Exception as e:
+        print(f"Error getting today's games: {e}")
+        return []
+
+def get_players_with_games_today():
+    """
+    Get players who have games scheduled today.
+    Prioritizes players on teams playing today.
+    
+    Returns:
+        list: List of player dictionaries with games today
+    """
+    try:
+        teams_today = get_todays_games()
+        
+        if not teams_today:
+            # If we can't get today's games, return all active players
+            return get_all_active_players()
+        
+        # Get all active players and filter by team
+        all_players = get_all_active_players()
+        players_today = []
+        
+        for player in all_players:
+            try:
+                # Get player's team - use recent game log
+                pid = player['id']
+                log = playergamelog.PlayerGameLog(player_id=pid, season='2023-24')
+                df = log.get_data_frames()[0]
+                
+                if not df.empty:
+                    # Get most recent game's team
+                    matchup = df.iloc[0]['MATCHUP']
+                    # Extract team abbreviation (e.g., "LAL vs. GSW" or "LAL @ GSW")
+                    player_team = matchup.split()[0] if matchup else None
+                    
+                    if player_team in teams_today:
+                        players_today.append(player)
+                
+                time.sleep(0.2)  # Rate limiting
+            except Exception:
+                continue
+        
+        print(f"Found {len(players_today)} players with games today")
+        return players_today if players_today else all_players[:50]  # Fallback to top 50
+    except Exception as e:
+        print(f"Error getting players with games today: {e}")
+        return get_all_active_players()[:50]  # Fallback
+
 def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name=None):
     """
     Get a player's season average for a specific stat.

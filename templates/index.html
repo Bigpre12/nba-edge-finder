@@ -81,6 +81,15 @@
             <button onclick="showTacticalFilters()" class="filter-btn" id="filterBtn">🔍 Tactical Filters</button>
         </div>
 
+        <!-- Probability Tier Tabs -->
+        <div class="probability-tabs">
+            <span class="prob-label">Hit Rate Filter:</span>
+            <button onclick="setMinProbability(60)" class="prob-tab" id="prob60">60%+</button>
+            <button onclick="setMinProbability(70)" class="prob-tab active" id="prob70">70%+</button>
+            <button onclick="setMinProbability(80)" class="prob-tab" id="prob80">80%+</button>
+            <button onclick="setMinProbability(0)" class="prob-tab" id="probAll">All</button>
+        </div>
+
         <!-- Tactical Filters Panel -->
         <div id="tacticalFiltersPanel" class="tactical-filters-panel" style="display: none;">
             <div class="filters-header">
@@ -1098,9 +1107,8 @@
                 params.append('stat_type', statTypeSelect.value);
             }
             
-            // Show all toggle
-            const showAllToggle = document.getElementById('showAllToggle');
-            if (showAllToggle && showAllToggle.checked) {
+            // Show all toggle - use currentMinProbability from tabs
+            if (currentMinProbability === 0) {
                 params.append('show_all', 'true');
             }
             
@@ -1110,11 +1118,9 @@
                 params.append('sort_by', sortSelect.value);
             }
             
-            // Filters
-            const minProbFilter = document.getElementById('minProbFilter');
-            if (minProbFilter) {
-                params.append('min_probability', minProbFilter.value);
-            }
+            // Filters - use currentMinProbability from tabs (higher priority than slider)
+            const minProb = currentMinProbability > 0 ? currentMinProbability : 50;
+            params.append('min_probability', minProb);
             
             const minEvFilter = document.getElementById('minEvFilter');
             if (minEvFilter) {
@@ -1201,6 +1207,47 @@
             }
             
             // Refresh data with new stat type
+            refreshData();
+        }
+
+        // Current minimum probability filter
+        let currentMinProbability = 70;
+        
+        function setMinProbability(minProb) {
+            currentMinProbability = minProb;
+            
+            // Update active tab styling
+            document.querySelectorAll('.prob-tab').forEach(tab => tab.classList.remove('active'));
+            if (minProb === 60) document.getElementById('prob60').classList.add('active');
+            else if (minProb === 70) document.getElementById('prob70').classList.add('active');
+            else if (minProb === 80) document.getElementById('prob80').classList.add('active');
+            else document.getElementById('probAll').classList.add('active');
+            
+            // Update the min probability filter slider if it exists
+            const minProbFilter = document.getElementById('minProbFilter');
+            if (minProbFilter) {
+                minProbFilter.value = minProb || 50;
+                const probValue = document.getElementById('probValue');
+                if (probValue) probValue.textContent = minProb || 50;
+            }
+            
+            // Update the show all toggle based on probability
+            const showAllToggle = document.getElementById('showAllToggle');
+            if (showAllToggle) {
+                showAllToggle.checked = (minProb === 0);
+            }
+            
+            // Update subtitle text
+            const subtitle = document.querySelector('.subtitle');
+            if (subtitle) {
+                if (minProb === 0) {
+                    subtitle.textContent = 'Sharp angles. No fluff. Pure edge. | Showing ALL props';
+                } else {
+                    subtitle.textContent = `Sharp angles. No fluff. Pure edge. | Showing ${minProb}%+ probability props only`;
+                }
+            }
+            
+            // Refresh data with new filter
             refreshData();
         }
 
@@ -1702,6 +1749,64 @@
         const itemsPerPage = 50;
         let allEdges = [];
         
+        function generatePaginationHTML(totalPages, currentPage, startIdx, endIdx, totalItems) {
+            if (totalPages <= 1) return '';
+            
+            let paginationHTML = '<div class="pagination">';
+            
+            // Previous button
+            paginationHTML += `<button onclick="goToPage(${currentPage - 1})" class="page-btn" ${currentPage === 1 ? 'disabled' : ''}>←</button>`;
+            
+            // Page numbers with ellipsis for many pages
+            const maxVisiblePages = 7;
+            let startPage = 1;
+            let endPage = totalPages;
+            
+            if (totalPages > maxVisiblePages) {
+                const half = Math.floor(maxVisiblePages / 2);
+                startPage = Math.max(1, currentPage - half);
+                endPage = Math.min(totalPages, currentPage + half);
+                
+                if (endPage - startPage + 1 < maxVisiblePages) {
+                    if (startPage === 1) {
+                        endPage = Math.min(totalPages, maxVisiblePages);
+                    } else {
+                        startPage = Math.max(1, totalPages - maxVisiblePages + 1);
+                    }
+                }
+            }
+            
+            // First page and ellipsis
+            if (startPage > 1) {
+                paginationHTML += `<button onclick="goToPage(1)" class="page-btn">1</button>`;
+                if (startPage > 2) {
+                    paginationHTML += `<span class="page-ellipsis">...</span>`;
+                }
+            }
+            
+            // Page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `<button onclick="goToPage(${i})" class="page-btn ${i === currentPage ? 'active' : ''}">${i}</button>`;
+            }
+            
+            // Last page and ellipsis
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHTML += `<span class="page-ellipsis">...</span>`;
+                }
+                paginationHTML += `<button onclick="goToPage(${totalPages})" class="page-btn">${totalPages}</button>`;
+            }
+            
+            // Next button
+            paginationHTML += `<button onclick="goToPage(${currentPage + 1})" class="page-btn" ${currentPage === totalPages ? 'disabled' : ''}>→</button>`;
+            
+            // Page info
+            paginationHTML += `<span class="page-info">${startIdx + 1}-${Math.min(endIdx, totalItems)} of ${totalItems}</span>`;
+            
+            paginationHTML += '</div>';
+            return paginationHTML;
+        }
+        
         function renderEdgesWithPagination(edges) {
             allEdges = edges;
             const totalPages = Math.ceil(edges.length / itemsPerPage);
@@ -1712,31 +1817,27 @@
             const pageEdges = edges.slice(startIdx, endIdx);
             
             const edgesContainer = document.getElementById('edgesContainer');
-            const showing70Plus = !document.getElementById('showAllToggle')?.checked;
+            const minProb = currentMinProbability || 70;
+            const probLabel = minProb > 0 ? `${minProb}%+ PROBABILITY PROPS` : 'ALL EDGES';
             
             if (pageEdges.length > 0) {
                 edgesContainer.innerHTML = `
                     <div class="edges-section">
                         <div class="section-header">
-                            <h2>${showing70Plus ? '70%+ PROBABILITY PROPS' : 'ALL EDGES'} (<span id="edgeCount">${edges.length}</span>)</h2>
-                            ${totalPages > 1 ? `
-                            <div class="pagination-controls">
-                                <button onclick="previousPage()" id="prevBtn" class="page-btn" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
-                                <span id="pageInfo">Page ${currentPage} of ${totalPages} (${startIdx + 1}-${Math.min(endIdx, edges.length)} of ${edges.length})</span>
-                                <button onclick="nextPage()" id="nextBtn" class="page-btn" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
-                            </div>
-                            ` : ''}
+                            <h2>${probLabel} (<span id="edgeCount">${edges.length}</span>)</h2>
                         </div>
-                        <p class="section-subtitle">${showing70Plus ? 'Only showing props with 70%+ hit probability from all active NBA players' : 'Showing all edges (including below 70%)'}</p>
+                        ${generatePaginationHTML(totalPages, currentPage, startIdx, endIdx, edges.length)}
+                        <p class="section-subtitle">${minProb > 0 ? `Only showing props with ${minProb}%+ hit probability from all active NBA players` : 'Showing all edges'}</p>
                         <div class="edges-grid" id="edgesGrid">
                             ${pageEdges.map(edge => renderEdgeCard(edge)).join('')}
                         </div>
+                        ${generatePaginationHTML(totalPages, currentPage, startIdx, endIdx, edges.length)}
                     </div>
                 `;
             } else {
                 edgesContainer.innerHTML = `
                     <div class="no-edges">
-                        <p>No edges found with current threshold.</p>
+                        <p>No edges found with current threshold. Checked ${document.getElementById('totalPlayers')?.textContent || 0} players. Adjust threshold or check back later.</p>
                     </div>
                 `;
             }
@@ -1772,19 +1873,22 @@
             `;
         }
         
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
+        function goToPage(page) {
+            const totalPages = Math.ceil(allEdges.length / itemsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
                 renderEdgesWithPagination(allEdges);
+                // Scroll to top of edges container
+                document.getElementById('edgesContainer')?.scrollIntoView({ behavior: 'smooth' });
             }
         }
         
+        function previousPage() {
+            goToPage(currentPage - 1);
+        }
+        
         function nextPage() {
-            const totalPages = Math.ceil(allEdges.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderEdgesWithPagination(allEdges);
-            }
+            goToPage(currentPage + 1);
         }
 
         // Check loading status and show indicator if players are being loaded
