@@ -16,12 +16,8 @@ keepalive = 5
 graceful_timeout = 30
 
 # Memory management - restart workers more frequently to prevent memory leaks
-max_requests = 100  # Reduced from 500 to restart more frequently and free memory
+max_requests = 100  # Restart after 100 requests to free memory and prevent leaks
 max_requests_jitter = 10
-
-# Worker lifecycle - restart workers after N requests to prevent memory leaks
-max_requests = 500  # Lower to restart more frequently and prevent issues
-max_requests_jitter = 25
 
 # Prevent worker crashes from killing the whole app
 worker_tmp_dir = "/dev/shm"  # Use shared memory if available, falls back to /tmp

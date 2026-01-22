@@ -272,8 +272,10 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
             streaks = []
         
         # Calculate probability and enhance with analytics for each edge
+        # Limit to first 30 edges to prevent timeout
         edges = []
-        for edge in all_edges:
+        edges_to_process = all_edges[:30] if len(all_edges) > 30 else all_edges
+        for edge in edges_to_process:
             try:
                 factors = edge.get('factors', {})
                 streak_info = edge.get('streak', {}) if edge.get('streak', {}).get('active') else None
