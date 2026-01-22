@@ -1199,54 +1199,54 @@
             }
         }
 
-        async function loadAllActivePlayers() {
-            const btn = document.getElementById('loadPlayersBtn');
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = '⏳ Loading... (10-15 min)';
+        // Load ALL active players (not just relevant ones) - unified function
+        async function loadAllPlayers() {
+            const btn = document.getElementById('loadAllBtn');
+            if (!btn) return;
             
-            // Show progress indicator
-            const progressDiv = document.getElementById('loadProgress');
-            if (progressDiv) {
-                progressDiv.style.display = 'block';
-                const progressText = document.getElementById('progressText');
-                if (progressText) {
-                    progressText.textContent = 'Starting to load all active NBA players... This will take 10-15 minutes.';
-                }
+            if (!confirm('This will load ALL active NBA players (500+ players).\n\n' +
+                        'This takes 10-15 minutes due to API rate limits.\n\n' +
+                        'The page will auto-refresh every 30 seconds to show progress.\n\n' +
+                        'Continue?')) {
+                return;
             }
             
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Loading All Players...';
+            
             try {
+                const statType = document.getElementById('statTypeSelect')?.value || 'PTS';
                 const response = await fetch('/api/load-all-players', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({stat_type: 'PTS', season: '2023-24'})
+                    body: JSON.stringify({
+                        stat_type: statType,
+                        season: '2023-24'
+                    })
                 });
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     alert('✅ Player loading started in background!\n\n' + 
                           'This will take 10-15 minutes.\n\n' +
-                          'IMPORTANT:\n' +
-                          '1. Check Render logs for progress\n' +
-                          '2. Wait 10-15 minutes\n' +
-                          '3. Refresh this page to see all players\n\n' +
-                          'The page will auto-refresh in 2 minutes to check status.');
+                          'The page will auto-refresh every 30 seconds to show progress.\n' +
+                          'You can continue using the app while it loads.');
                     
-                    // Refresh page after 2 minutes to check status
+                    // Refresh data after 30 seconds to check progress
                     setTimeout(() => {
-                        location.reload();
-                    }, 120000); // 2 minutes
+                        refreshData();
+                    }, 30000);
                 } else {
                     alert('❌ Error: ' + (data.error || 'Failed to start loading'));
                     btn.disabled = false;
                     btn.textContent = originalText;
-                    if (progressDiv) progressDiv.style.display = 'none';
                 }
             } catch (error) {
                 alert('❌ Error: ' + error.message);
                 btn.disabled = false;
                 btn.textContent = originalText;
-                if (progressDiv) progressDiv.style.display = 'none';
             }
         }
         
