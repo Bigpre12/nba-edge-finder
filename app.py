@@ -254,8 +254,18 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         
         track_line_changes(MARKET_PROJECTIONS)
         
+        # Limit number of players to process to prevent timeout
+        # Process max 50 players at a time for faster response (reduced from 100)
+        # This ensures the request completes within the timeout window
+        max_players = 50
+        if len(MARKET_PROJECTIONS) > max_players:
+            projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
+            print(f"⚠️ Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout")
+        else:
+            projections_to_check = MARKET_PROJECTIONS
+        
         try:
-            result = check_for_edges(MARKET_PROJECTIONS, threshold=2.0, stat_type=stat_type, include_streaks=True, min_streak=2, include_factors=True)
+            result = check_for_edges(projections_to_check, threshold=2.0, stat_type=stat_type, include_streaks=True, min_streak=2, include_factors=True)
             all_edges = result.get('edges', []) if result else []
             streaks = result.get('streaks', []) if result else []
         except Exception as e:

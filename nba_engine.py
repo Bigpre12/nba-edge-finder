@@ -1097,8 +1097,10 @@ def check_for_edges(projections, threshold=2.0, stat_type='PTS', season='2023-24
                 if not any(e['player'] == player_name for e in edges):
                     streaks.append(streak_data)
         
-        # Prevent hitting API rate limits
-        time.sleep(1)
+        # Reduced sleep time - caching handles most rate limiting
+        # Only sleep every 5 players to reduce total processing time
+        if len(edges) % 5 == 0 and len(edges) > 0:
+            time.sleep(0.5)  # Reduced from 1 second per player
     
     return {
         'edges': edges,
