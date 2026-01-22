@@ -806,9 +806,11 @@ def api_parlay_calculator():
 def api_glitched_props():
     """API endpoint for glitched props management."""
     if request.method == 'GET':
+        scan_status = get_scan_status()
         return jsonify({
             'success': True,
-            'props': get_glitched_props()
+            'props': get_glitched_props(),
+            'scan_status': scan_status
         })
     
     elif request.method == 'POST':
