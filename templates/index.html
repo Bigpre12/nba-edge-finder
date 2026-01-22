@@ -772,9 +772,11 @@
                                     </div>
                                     `;
                                 } else {
+                                    const playerName = edge.player || edge.player_name || 'Unknown Player';
+                                    const recommendation = edge.recommendation || 'OVER';
                                     return `
-                                    <div class="edge-card ${edge.recommendation.toLowerCase()}">
-                                        <div class="player-name">${edge.player}</div>
+                                    <div class="edge-card ${recommendation.toLowerCase()}">
+                                        <div class="player-name">${playerName}</div>
                                         <div class="edge-details">
                                             <div class="stat-row"><span class="label">Line:</span><span class="value">${edge.line}</span></div>
                                             <div class="stat-row"><span class="label">L5 Avg:</span><span class="value">${edge.average}</span></div>
