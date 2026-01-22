@@ -13,7 +13,7 @@ worker_class = "sync"
 worker_connections = 1000
 timeout = 360  # 6 minutes - must be longer than edge calculation timeout (5 min) to allow graceful timeout
 keepalive = 5
-graceful_timeout = 30
+graceful_timeout = 60  # Increased to 60 seconds to allow more time for graceful shutdown
 
 # Memory management - restart workers more frequently to prevent memory leaks
 max_requests = 100  # Restart after 100 requests to free memory and prevent leaks
