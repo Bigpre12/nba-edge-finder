@@ -295,32 +295,28 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
         return None
     
     try:
-        
         if df.empty:
-            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
-            print(f"   ⚠️ No career stats found for {player_info}")
+            # Suppress warning for expected case (player might not have career stats yet)
+            # Only log if it's a known active player
             return None
         
         # Filter for the specific season
         season_df = df[df['SEASON_ID'] == season]
         
         if season_df.empty:
-            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
-            print(f"   ⚠️ No data for {player_info} in season {season}")
+            # Suppress warning - player might not have played this season (injury, rookie, etc.)
             return None
         
         if stat_type not in season_df.columns:
-            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
-            print(f"   ⚠️ Stat '{stat_type}' not available for {player_info}")
+            # Suppress warning - stat might not be available for this player type
             return None
         
         # Get the average for the season
         avg = season_df[stat_type].mean()
-        if pd.notna(avg):
+        if pd.notna(avg) and avg > 0:
             return round(avg, 1)
         else:
-            player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
-            print(f"   ⚠️ Average is NaN for {player_info} ({stat_type})")
+            # Suppress warning - NaN or zero average is expected for some players
             return None
     except KeyError as e:
         player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"

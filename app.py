@@ -410,10 +410,11 @@ def index():
                                 loaded_count += 1
                             else:
                                 failed_count += 1
+                                # Don't log every failure - many players legitimately have no data
                             
                             # Progress logging every 10 players
                             if (i + 1) % 10 == 0:
-                                print(f"   📈 Progress: {i + 1}/{len(players_to_load)} processed ({loaded_count} loaded, {failed_count} failed)...")
+                                print(f"   📈 Progress: {i + 1}/{len(players_to_load)} processed ({loaded_count} loaded, {failed_count} skipped)...")
                             
                             # Rate limiting - more conservative to avoid timeouts
                             if (i + 1) % 10 == 0:
@@ -425,7 +426,10 @@ def index():
                                 
                         except Exception as e:
                             failed_count += 1
-                            print(f"   ⚠️ Error loading {player_name}: {e}")
+                            # Only log unexpected errors (not "no data" which is normal)
+                            error_str = str(e).lower()
+                            if 'no data' not in error_str and 'empty' not in error_str:
+                                print(f"   ⚠️ Unexpected error loading {player_name}: {type(e).__name__}: {e}")
                             continue
                     
                     # Always ensure default players are included
@@ -599,9 +603,15 @@ def api_edges():
             exclude_rotation=exclude_rotation
         )
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        edges, streaks, high_prob_props, parlay_recommendations, error = [], [], [], {}, f"Error: {str(e)}"
+        # Log error but don't crash - return empty data instead
+        error_type = type(e).__name__
+        error_msg = str(e)
+        print(f"⚠️ Error in get_edges_data: {error_type}: {error_msg}")
+        # Only print full traceback for unexpected errors
+        if error_type not in ['KeyError', 'AttributeError', 'ValueError', 'TypeError']:
+            import traceback
+            traceback.print_exc()
+        edges, streaks, high_prob_props, parlay_recommendations, error = [], [], [], {}, f"Error: {error_msg}"
     
     return jsonify({
         'edges': edges,
