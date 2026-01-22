@@ -1,0 +1,84 @@
+name: Scrape NBA Data
+
+on:
+  # Run every 15 minutes
+  schedule:
+    - cron: '*/15 * * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+  
+  # Run on push to main (for testing)
+  push:
+    branches: [main]
+    paths:
+      - 'scraper.py'
+      - '.github/workflows/scrape-data.yml'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install nba_api requests
+      
+      - name: Create data directory
+        run: mkdir -p data
+      
+      - name: Run scraper
+        run: python scraper.py
+        env:
+          PYTHONUNBUFFERED: '1'
+      
+      - name: Check generated files
+        run: |
+          echo "Generated files:"
+          ls -la data/
+          echo ""
+          echo "Props file size:"
+          wc -c data/props.json || echo "props.json not found"
+          echo ""
+          echo "Props preview:"
+          head -c 500 data/props.json || echo "No preview"
+      
+      - name: Commit and push data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add data/
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update NBA data - $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "Data committed and pushed"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Summary
+        run: |
+          echo "## Scrape Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Props: $(cat data/props.json | python -c 'import sys,json; print(json.load(sys.stdin).get(\"count\", 0))')" >> $GITHUB_STEP_SUMMARY
+          echo "- Updated: $(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY

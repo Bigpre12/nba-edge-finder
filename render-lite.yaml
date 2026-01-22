@@ -1,0 +1,21 @@
+# Ultra-light Render configuration
+# Uses minimal FastAPI server with single worker
+
+services:
+  - type: web
+    name: nba-edge-finder-lite
+    runtime: python
+    buildCommand: pip install -r requirements-lite.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+    healthCheckPath: /health
+    plan: free
+    region: oregon
+
+# Notes:
+# - Single worker to minimize memory usage
+# - No server-side scraping (done by GitHub Actions)
+# - Data served from /data/*.json files committed by GitHub Actions
+# - ~30MB RAM usage vs 500MB+ with the full Flask app

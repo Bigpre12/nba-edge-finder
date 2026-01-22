@@ -1,0 +1,10 @@
+# Ultra-light requirements for Render free tier
+# Only 3 dependencies for the FastAPI server
+
+fastapi==0.109.0
+uvicorn==0.27.0
+python-multipart==0.0.6
+
+# For scraper (GitHub Actions only, not needed on Render)
+# nba_api==1.4.1
+# requests==2.31.0

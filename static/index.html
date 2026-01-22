@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Edge Finder</title>
+    <link rel="stylesheet" href="/static/style-lite.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>NBA Edge Finder</h1>
+            <p class="subtitle">Ultra-light prop analysis</p>
+            <div class="status-bar">
+                <span id="updateTime">Loading...</span>
+                <span id="propCount">0 props</span>
+            </div>
+        </header>
+
+        <!-- Accessible Tab Navigation -->
+        <nav class="tabs" role="tablist" aria-label="Stat categories">
+            <button 
+                role="tab" 
+                id="tab-pts" 
+                aria-selected="true" 
+                aria-controls="panel-pts"
+                tabindex="0"
+                data-stat="pts"
+                class="tab active">
+                Points
+            </button>
+            <button 
+                role="tab" 
+                id="tab-reb" 
+                aria-selected="false" 
+                aria-controls="panel-reb"
+                tabindex="-1"
+                data-stat="reb"
+                class="tab">
+                Rebounds
+            </button>
+            <button 
+                role="tab" 
+                id="tab-ast" 
+                aria-selected="false" 
+                aria-controls="panel-ast"
+                tabindex="-1"
+                data-stat="ast"
+                class="tab">
+                Assists
+            </button>
+            <button 
+                role="tab" 
+                id="tab-all" 
+                aria-selected="false" 
+                aria-controls="panel-all"
+                tabindex="-1"
+                data-stat="all"
+                class="tab">
+                All Props
+            </button>
+        </nav>
+
+        <!-- Probability Filter -->
+        <div class="filter-bar">
+            <label for="minProb">Min Probability:</label>
+            <select id="minProb">
+                <option value="0">All</option>
+                <option value="60">60%+</option>
+                <option value="70" selected>70%+</option>
+                <option value="80">80%+</option>
+            </select>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="spinner" class="spinner" hidden aria-live="polite">
+            <div class="spinner-icon"></div>
+            <span>Loading props...</span>
+        </div>
+
+        <!-- Error/Stale Banner -->
+        <div id="errorBanner" class="error-banner" hidden role="alert">
+            <span id="errorText">Data may be stale. Last update: unknown</span>
+            <button onclick="refreshData()" class="retry-btn">Retry</button>
+        </div>
+
+        <!-- Tab Panels -->
+        <main>
+            <section 
+                role="tabpanel" 
+                id="panel-pts" 
+                aria-labelledby="tab-pts"
+                class="panel active">
+                <div id="content-pts" class="props-grid"></div>
+            </section>
+            <section 
+                role="tabpanel" 
+                id="panel-reb" 
+                aria-labelledby="tab-reb"
+                class="panel"
+                hidden>
+                <div id="content-reb" class="props-grid"></div>
+            </section>
+            <section 
+                role="tabpanel" 
+                id="panel-ast" 
+                aria-labelledby="tab-ast"
+                class="panel"
+                hidden>
+                <div id="content-ast" class="props-grid"></div>
+            </section>
+            <section 
+                role="tabpanel" 
+                id="panel-all" 
+                aria-labelledby="tab-all"
+                class="panel"
+                hidden>
+                <div id="content-all" class="props-grid"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Data updates every 15 minutes via GitHub Actions</p>
+            <p><small>Press Tab to navigate, Enter to select</small></p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
