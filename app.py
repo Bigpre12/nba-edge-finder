@@ -244,6 +244,11 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         global MARKET_PROJECTIONS
         MARKET_PROJECTIONS = get_market_projections(force_reload=True)
         
+        # Early return if no players - prevents timeout on empty data
+        if not MARKET_PROJECTIONS or len(MARKET_PROJECTIONS) == 0:
+            print("INFO: No players loaded yet, returning empty edges")
+            return [], [], [], {}, None
+        
         # Note: Don't generate projections here - it blocks the request
         # Use the "Load All Active Players" button or wait for background load
         # For different stat types, we'll use the same projections but check edges for that stat
