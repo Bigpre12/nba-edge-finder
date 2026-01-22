@@ -256,9 +256,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
         track_line_changes(MARKET_PROJECTIONS)
         
         # Limit number of players to process to prevent timeout and memory issues
-        # Process max 20 players at a time for faster response and lower memory usage
+        # Process max 5 players at a time for faster response and lower memory usage
         # This ensures the request completes within the timeout window and doesn't use too much memory
-        max_players = 20
+        max_players = 5
         if len(MARKET_PROJECTIONS) > max_players:
             projections_to_check = dict(list(MARKET_PROJECTIONS.items())[:max_players])
             print(f"WARNING: Processing {max_players} of {len(MARKET_PROJECTIONS)} players to prevent timeout")
@@ -266,7 +266,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
             projections_to_check = MARKET_PROJECTIONS
         
         try:
-            result = check_for_edges(projections_to_check, threshold=2.0, stat_type=stat_type, include_streaks=True, min_streak=2, include_factors=True)
+            # Disable expensive operations to prevent timeout
+            # include_factors=False reduces API calls significantly
+            result = check_for_edges(projections_to_check, threshold=2.0, stat_type=stat_type, include_streaks=False, min_streak=2, include_factors=False)
             all_edges = result.get('edges', []) if result else []
             streaks = result.get('streaks', []) if result else []
         except Exception as e:
@@ -277,9 +279,9 @@ def get_edges_data(show_only_70_plus=True, stat_type='PTS',
             streaks = []
         
         # Calculate probability and enhance with analytics for each edge
-        # Limit to first 30 edges to prevent timeout
+        # Limit to first 20 edges to prevent timeout
         edges = []
-        edges_to_process = all_edges[:30] if len(all_edges) > 30 else all_edges
+        edges_to_process = all_edges[:20] if len(all_edges) > 20 else all_edges
         for edge in edges_to_process:
             try:
                 factors = edge.get('factors', {})
