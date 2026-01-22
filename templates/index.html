@@ -31,7 +31,7 @@
                 <span class="stat-description" id="statDescription">{{ stat_categories.get(current_stat_type, {}).get('description', '') if stat_categories else '' }}</span>
             </div>
             <p class="player-count">
-                Loaded: <span id="totalPlayers" style="color: {% if projections|length > 3 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ projections|length }}</span> relevant players | 
+                Loaded: <span id="totalPlayers" style="color: {% if projections|length > 0 %}#27ae60{% else %}#e74c3c{% endif %}; font-weight: bold;">{{ projections|length }}</span> relevant players | 
                 Filtered to: <span id="filteredCount">{{ edges|length }}</span> props (70%+)
                 <br><small style="color: #95a5a6; font-size: 0.85em;">Auto-loading players with hot streaks, trends, and role players in background...</small>
             </p>
@@ -671,8 +671,8 @@
             const playerCount = data.total_players_loaded || 0;
             if (totalPlayersEl) {
                 totalPlayersEl.textContent = playerCount;
-                // Update color based on count (green if >3, red if <=3)
-                totalPlayersEl.style.color = playerCount > 3 ? '#27ae60' : '#e74c3c';
+                // Update color based on count (green if >0, red if 0)
+                totalPlayersEl.style.color = playerCount > 0 ? '#27ae60' : '#e74c3c';
             }
             if (filteredCountEl) filteredCountEl.textContent = data.edges?.length || 0;
             

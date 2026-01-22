@@ -45,34 +45,26 @@ except ImportError:
 # File to store projections
 PROJECTIONS_FILE = 'projections.json'
 
-# Default market projections - Update these as needed
-DEFAULT_PROJECTIONS = {
-    "LeBron James": 24.5,
-    "Kevin Durant": 26.5,
-    "Stephen Curry": 28.5
-}
+# No default projections - app will only show loaded players
+DEFAULT_PROJECTIONS = {}
 
 def ensure_default_projections(projections):
-    """Ensures default players (LeBron, KD, Steph) are always present in projections."""
-    updated_projections = projections.copy() if projections else {}
-    for player_name, default_line in DEFAULT_PROJECTIONS.items():
-        if player_name not in updated_projections:
-            updated_projections[player_name] = default_line
-            print(f"Added default player {player_name} to projections.")
-    return updated_projections
+    """No longer adds default players - returns projections as-is."""
+    # Removed default players - app now only uses loaded players
+    return projections.copy() if projections else {}
 
 def load_projections():
-    """Load projections from file or return defaults."""
+    """Load projections from file or return empty dict."""
     if os.path.exists(PROJECTIONS_FILE):
         try:
             with open(PROJECTIONS_FILE, 'r') as f:
                 projections = json.load(f)
-                # Ensure all default players are present
-                return ensure_default_projections(projections)
+                # Return loaded projections (no defaults added)
+                return projections if projections else {}
         except Exception as e:
             print(f"Error loading projections: {e}")
-            return DEFAULT_PROJECTIONS.copy()
-    return DEFAULT_PROJECTIONS.copy()
+            return {}
+    return {}
 
 def save_projections(projections):
     """Save projections to file."""
@@ -81,8 +73,7 @@ def save_projections(projections):
             print("⚠️ Warning: Attempted to save empty projections")
             return False
         
-        # Ensure all default players are present before saving
-        projections = ensure_default_projections(projections)
+        # No longer adding default players - save what we have
         
         file_path = os.path.abspath(PROJECTIONS_FILE)
         print(f"💾 Saving {len(projections)} players to: {file_path}")
@@ -375,8 +366,8 @@ def index():
         # Auto-load relevant players if projections file is empty or has default values
         # Do this in background to avoid blocking startup
         # Only loads players with hot streaks, positive trends, or role players (not all 500+)
-        # Check if we need to trigger background loading
-        should_trigger_load = len(MARKET_PROJECTIONS) <= 3
+        # Check if we need to trigger background loading (no defaults, so check for empty)
+        should_trigger_load = len(MARKET_PROJECTIONS) == 0
         
         if should_trigger_load:
             print(f"⚠️ Only {len(MARKET_PROJECTIONS)} players loaded. Triggering background load...")
@@ -442,11 +433,9 @@ def index():
                                 print(f"   ⚠️ Unexpected error loading {player_name}: {type(e).__name__}: {e}")
                             continue
                     
-                    # Always ensure default players are included
-                    new_projections = ensure_default_projections(new_projections)
-                    
-                    # Only save if we got more than just the default 3 players
-                    if new_projections and len(new_projections) > 3:
+                    # No default players - save whatever we loaded
+                    # Only save if we got at least 1 player
+                    if new_projections and len(new_projections) > 0:
                         if save_projections(new_projections):
                             MARKET_PROJECTIONS = new_projections
                             print("=" * 60)
@@ -677,7 +666,7 @@ def api_load_all_players():
                     season=season
                 )
                 
-                if projections and len(projections) > 3:
+                if projections and len(projections) > 0:
                     if save_projections(projections):
                         MARKET_PROJECTIONS = projections
                         print("=" * 60)
@@ -686,10 +675,6 @@ def api_load_all_players():
                         print("=" * 60)
                     else:
                         print("❌ Failed to save projections file")
-                elif projections and len(projections) > 0:
-                    print(f"⚠️ Only loaded {len(projections)} players (less than expected)")
-                    if save_projections(projections):
-                        MARKET_PROJECTIONS = projections
                 else:
                     print(f"❌ Warning: No players loaded for {stat_type}")
             except Exception as e:
@@ -726,9 +711,9 @@ def api_projections():
         global MARKET_PROJECTIONS
         MARKET_PROJECTIONS = get_market_projections(force_reload=True)
         
-        default_players = list(DEFAULT_PROJECTIONS.keys())
+        # No default players anymore - check if empty
         current_players = list(MARKET_PROJECTIONS.keys())
-        is_default_only = len(MARKET_PROJECTIONS) <= 3 and all(p in default_players for p in current_players)
+        is_default_only = len(MARKET_PROJECTIONS) == 0
         
         return jsonify({
             'count': len(MARKET_PROJECTIONS),
