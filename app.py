@@ -155,6 +155,20 @@ def init_scheduler():
                 except Exception as e:
                     print(f"Error in daily update: {e}")
             
+            def glitched_props_scan_job():
+                """Run glitched props scan every 15 minutes (24/7)."""
+                try:
+                    print(f"[{datetime.now()}] 🔍 Running automated glitched props scan...")
+                    found_glitches = scan_active_players_for_glitches()
+                    if found_glitches:
+                        print(f"✅ Found {len(found_glitches)} new glitched props")
+                    else:
+                        print("ℹ️ No new glitched props found this scan")
+                except Exception as e:
+                    print(f"❌ Error in glitched props scan job: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
             # Schedule daily update at 8am
             scheduler.add_job(
                 func=daily_update_job,
@@ -166,9 +180,21 @@ def init_scheduler():
                 replace_existing=True
             )
             
+            # Schedule glitched props scan every 15 minutes (around the clock)
+            scheduler.add_job(
+                func=glitched_props_scan_job,
+                trigger="interval",
+                minutes=15,
+                id='glitched_props_scan',
+                name='Glitched Props Scan (24/7)',
+                replace_existing=True
+            )
+            
             # Shut down scheduler on app exit
             atexit.register(lambda: scheduler.shutdown() if scheduler and hasattr(scheduler, 'shutdown') else None)
-            print("Scheduler initialized successfully")
+            print("✅ Scheduler initialized successfully")
+            print("   - Daily update: 8:00 AM")
+            print("   - Glitched props scan: Every 15 minutes (24/7)")
     except Exception as e:
         print(f"Warning: Could not initialize scheduler: {e}")
         print("Daily updates will not run automatically, but app will still work")
@@ -877,6 +903,43 @@ def api_glitched_props():
             return jsonify({
                 'success': False,
                 'error': str(e)
+            }), 500
+
+@app.route('/api/glitched-props/scan', methods=['POST'])
+@requires_auth
+def api_trigger_glitched_scan():
+    """Manually trigger a glitched props scan."""
+    try:
+        print(f"[{datetime.now()}] Manual glitched props scan triggered...")
+        found_glitches = scan_active_players_for_glitches()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Scan complete. Found {len(found_glitches)} new glitched props.',
+            'found_count': len(found_glitches),
+            'props': get_glitched_props(),
+            'scan_status': get_scan_status()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/glitched-props/status', methods=['GET'])
+@requires_auth
+def api_glitched_scan_status():
+    """Get the status of the automated glitched props scanning system."""
+    try:
+        status = get_scan_status()
+        return jsonify({
+            'success': True,
+            'status': status
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
             }), 500
 
 @app.route('/api/glitched-props/scan', methods=['POST'])
