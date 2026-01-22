@@ -1131,7 +1131,7 @@
             // Debounce: prevent multiple simultaneous refreshes
             if (isRefreshing) {
                 console.log('Refresh already in progress, skipping...');
-                return;
+                return Promise.resolve();
             }
             
             isRefreshing = true;
@@ -1140,8 +1140,8 @@
             const showAllToggle = document.getElementById('showAllToggle');
             const showAll = showAllToggle ? showAllToggle.checked : false;
             
-            refreshBtn.disabled = true;
-            loadingIndicator.style.display = 'inline';
+            if (refreshBtn) refreshBtn.disabled = true;
+            if (loadingIndicator) loadingIndicator.style.display = 'inline';
             
             try {
                 const filterParams = buildFilterParams();
@@ -1149,12 +1149,17 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 updatePage(data);
+                return Promise.resolve(data); // Return data for chaining
             } catch (error) {
-                document.getElementById('errorContainer').innerHTML = 
-                    `<div class="error-message"><strong>Error:</strong> Failed to fetch data: ${error.message}</div>`;
+                const errorContainer = document.getElementById('errorContainer');
+                if (errorContainer) {
+                    errorContainer.innerHTML = 
+                        `<div class="error-message"><strong>Error:</strong> Failed to fetch data: ${error.message}</div>`;
+                }
+                return Promise.reject(error);
             } finally {
-                refreshBtn.disabled = false;
-                loadingIndicator.style.display = 'none';
+                if (refreshBtn) refreshBtn.disabled = false;
+                if (loadingIndicator) loadingIndicator.style.display = 'none';
                 isRefreshing = false;  // Reset flag
             }
         }

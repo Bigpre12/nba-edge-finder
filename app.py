@@ -434,7 +434,7 @@ def index():
                             continue
                     
                     # No default players - save whatever we loaded
-                    # Only save if we got at least 1 player
+                    # Save if we got at least 1 player
                     if new_projections and len(new_projections) > 0:
                         if save_projections(new_projections):
                             MARKET_PROJECTIONS = new_projections
@@ -442,15 +442,10 @@ def index():
                             print(f"✅ SUCCESS! Loaded {len(MARKET_PROJECTIONS)} players for PTS")
                             print(f"   Sample: {', '.join(list(new_projections.keys())[:15])}...")
                             print("=" * 60)
+                            print(f"📊 Projections saved to {PROJECTIONS_FILE}")
+                            print(f"   Frontend will auto-refresh to show new players")
                         else:
                             print("❌ Failed to save projections file")
-                    elif new_projections:
-                        print(f"⚠️ Warning: Only loaded {len(new_projections)} players (expected more)")
-                        print(f"   Players: {', '.join(list(new_projections.keys()))}")
-                        # Still save it if it's better than what we had
-                        if len(new_projections) > len(MARKET_PROJECTIONS):
-                            save_projections(new_projections)
-                            MARKET_PROJECTIONS = new_projections
                     else:
                         print(f"⚠️ Warning: No players loaded")
                         print("   This might be due to NBA API rate limits or network issues.")
