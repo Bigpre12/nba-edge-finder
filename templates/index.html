@@ -1588,6 +1588,58 @@
             refreshData();
         }
 
+        // Add to Chase List function
+        async function addToChaseList(player, statType, line) {
+            try {
+                const response = await fetch('/api/chase-list', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        player: player,
+                        stat_type: statType || 'PTS',
+                        line: line
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Added to chase list');
+                    loadChaseList();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to add'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Add Alt Line function
+        async function addAltLine(player, mainLine, altLine, statType, source) {
+            try {
+                const response = await fetch('/api/alt-lines', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        player: player,
+                        main_line: mainLine,
+                        alt_line: altLine,
+                        stat_type: statType || 'PTS',
+                        source: source || 'Manual'
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Alternative line added');
+                    loadAltLines();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to add'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
         // Initial load timestamp
         document.addEventListener('DOMContentLoaded', function() {
             const now = new Date().toLocaleString();
@@ -1595,6 +1647,8 @@
             loadDailyUpdateStatus();
             // Refresh status every minute
             setInterval(loadDailyUpdateStatus, 60000);
+            // Check projections status
+            checkProjectionsStatus();
         });
     </script>
     <script src="{{ url_for('static', filename='parlay_ui.js') }}"></script>
