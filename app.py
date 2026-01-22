@@ -467,16 +467,17 @@ def index():
             if not hasattr(app, '_loading_players'):
                 app._loading_players = False
             
+            # Import time module for stuck thread detection
+            import time as time_module
+            
             # Also check if loading flag is stuck (older than 10 minutes = probably crashed)
             if hasattr(app, '_loading_start_time'):
-                import time as time_module
                 if time_module.time() - app._loading_start_time > 600:  # 10 minutes
                     print("⚠️ Previous load thread appears stuck (10+ min), resetting flag...")
                     app._loading_players = False
             
             if not app._loading_players:
                 app._loading_players = True
-                import time as time_module
                 app._loading_start_time = time_module.time()  # Track when we started
                 # Start in background thread, don't wait
                 load_thread = threading.Thread(target=background_load, daemon=True)
