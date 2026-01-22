@@ -386,11 +386,13 @@ def index():
                                 new_projections[player_name] = round(season_avg, 1)
                                 loaded_count += 1
                             
-                            # Rate limiting
+                            # Rate limiting - more conservative to avoid timeouts
                             if loaded_count % 10 == 0:
-                                time.sleep(1)  # Brief pause every 10 players
+                                time.sleep(5)  # Longer pause every 10 players
+                            elif loaded_count % 5 == 0:
+                                time.sleep(2.5)  # Medium pause every 5 players
                             else:
-                                time.sleep(0.2)  # Small delay between players
+                                time.sleep(1.5)  # Increased delay between players
                                 
                         except Exception as e:
                             print(f"Error loading {player_name}: {e}")

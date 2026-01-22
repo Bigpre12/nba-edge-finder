@@ -48,17 +48,17 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
         return None
     
     # Retry logic for API calls with timeout handling
-    max_retries = 3
-    retry_delay = 2
+    max_retries = 5  # Increased from 3
+    retry_delay = 3  # Increased from 2
     
     for attempt in range(max_retries):
         try:
-            log = playergamelog.PlayerGameLog(player_id=pid, season=season, timeout=30)
+            log = playergamelog.PlayerGameLog(player_id=pid, season=season, timeout=60)  # Increased from 30
             df = log.get_data_frames()[0].head(games)
             break  # Success, exit retry loop
         except (Timeout, ConnectionError, RequestException) as e:
             if attempt < max_retries - 1:
-                wait_time = retry_delay * (attempt + 1)  # Exponential backoff
+                wait_time = retry_delay * (2 ** attempt)  # Exponential backoff: 3, 6, 12, 24
                 print(f"   ⚠️ Timeout/connection error for {player_name} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
                 time.sleep(wait_time)
                 continue
@@ -66,8 +66,21 @@ def fetch_recent_games(player_name, stat_type='PTS', season='2023-24', games=10)
                 print(f"   ❌ Failed to fetch games for {player_name} after {max_retries} attempts: {e}")
                 return None
         except Exception as e:
-            print(f"   ❌ Error fetching games for {player_name}: {e}")
-            return None
+            error_str = str(e).lower()
+            # Check if it's a timeout-related error even if not caught by Timeout exception
+            if 'timeout' in error_str or 'timed out' in error_str or 'read timeout' in error_str:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (2 ** attempt)
+                    print(f"   ⚠️ Timeout error for {player_name} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"   ❌ Timeout fetching games for {player_name} after {max_retries} attempts")
+                    return None
+            else:
+                # Non-timeout errors - don't retry
+                print(f"   ❌ Error fetching games for {player_name}: {e}")
+                return None
     else:
         # If we exhausted retries
         return None
@@ -228,8 +241,8 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
         float: Season average, None if error or no data
     """
     # Retry logic for API calls with timeout handling
-    max_retries = 3
-    retry_delay = 2
+    max_retries = 5  # Increased from 3
+    retry_delay = 3  # Increased from 2
     
     for attempt in range(max_retries):
         try:
@@ -239,7 +252,7 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
             break  # Success, exit retry loop
         except (Timeout, ConnectionError, RequestException) as e:
             if attempt < max_retries - 1:
-                wait_time = retry_delay * (attempt + 1)  # Exponential backoff
+                wait_time = retry_delay * (2 ** attempt)  # Exponential backoff: 3, 6, 12, 24
                 player_info = f"{player_name} (ID: {player_id})" if player_name else f"ID: {player_id}"
                 print(f"   ⚠️ Timeout/connection error for {player_info} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
                 time.sleep(wait_time)
@@ -254,23 +267,23 @@ def get_season_average(player_id, stat_type='PTS', season='2023-24', player_name
             error_str = str(e).lower()
             
             # Check if it's a timeout-related error
-            if 'timeout' in error_str or 'timed out' in error_str or 'read timeout' in error_str:
+            if 'timeout' in error_str or 'timed out' in error_str or 'read timeout' in error_str or 'connection' in error_str:
                 if attempt < max_retries - 1:
-                    wait_time = retry_delay * (attempt + 1)
+                    wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
                     print(f"   ⚠️ Timeout error for {player_info} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
                     time.sleep(wait_time)
                     continue
                 else:
                     print(f"   ❌ Timeout fetching season average for {player_info} after {max_retries} attempts")
                     return None
-            elif error_type in ['KeyError', 'AttributeError', 'ValueError']:
+            elif error_type in ['KeyError', 'AttributeError', 'ValueError', 'IndexError']:
                 # These are data errors, not network errors - don't retry
                 print(f"   ⚠️ {error_type} fetching season average for {player_info}: {e}")
                 return None
             else:
-                # Unknown error - try once more
+                # Unknown error - retry with exponential backoff
                 if attempt < max_retries - 1:
-                    wait_time = retry_delay * (attempt + 1)
+                    wait_time = retry_delay * (2 ** attempt)
                     print(f"   ⚠️ Error for {player_info} (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
                     time.sleep(wait_time)
                     continue
@@ -373,9 +386,11 @@ def generate_projections_from_active_players(stat_type='PTS', season='2023-24', 
         # Rate limiting - be more conservative with bulk operations to avoid timeouts
         if (i + 1) % 10 == 0:
             print(f"   📈 Progress: {i + 1}/{len(active_players)} players processed ({successful} successful, {failed} failed)...")
-            time.sleep(3)  # Longer delay every 10 players to avoid rate limits and timeouts
+            time.sleep(5)  # Longer delay every 10 players to avoid rate limits and timeouts
+        elif (i + 1) % 5 == 0:
+            time.sleep(2.5)  # Medium delay every 5 players
         else:
-            time.sleep(1.0)  # Increased delay between players to reduce timeout risk
+            time.sleep(1.5)  # Increased delay between players to reduce timeout risk
     
     print(f"✅ Generated projections for {len(projections)} players ({successful} successful, {failed} failed)")
     if len(projections) < 10:

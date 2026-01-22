@@ -11,7 +11,7 @@ bind = f"0.0.0.0:{port}"
 workers = 1
 worker_class = "sync"
 worker_connections = 1000
-timeout = 120  # Increased timeout for slow API calls
+timeout = 180  # Increased to handle slow API calls with retries  # Increased timeout for slow API calls
 keepalive = 5
 graceful_timeout = 30
 
