@@ -49,6 +49,204 @@ def calculate_expected_value(probability: float, odds: int, bet_amount: float = 
         'is_positive_ev': ev > 0
     }
 
+
+def calculate_confidence_score(probability: float, ev_data: Dict, edge_data: Dict = None, 
+                                factors: Dict = None, streak_info: Dict = None) -> Dict:
+    """
+    Calculate comprehensive confidence score with grade, risk tier, and stake suggestion.
+    
+    Args:
+        probability: Win probability (0-100)
+        ev_data: EV calculation results
+        edge_data: Edge data dictionary
+        factors: Performance factors dictionary
+        streak_info: Streak information dictionary
+    
+    Returns:
+        Dictionary with confidence score, grade, risk tier, and stake suggestion
+    """
+    # Base confidence from probability (weighted 40%)
+    prob_score = probability * 0.4
+    
+    # EV contribution (weighted 25%)
+    ev = ev_data.get('ev', 0)
+    ev_pct = ev_data.get('ev_percentage', 0)
+    # Normalize EV: $0-20 EV maps to 0-25 points
+    ev_score = min(25, max(0, ev_pct * 2.5)) if ev > 0 else 0
+    
+    # Market edge contribution (weighted 20%)
+    market_edge = ev_data.get('market_edge', 0)
+    # Normalize: 0-15% edge maps to 0-20 points
+    edge_score = min(20, max(0, market_edge * 1.33)) if market_edge > 0 else 0
+    
+    # Streak bonus (weighted 10%)
+    streak_score = 0
+    if streak_info and streak_info.get('active'):
+        streak_count = streak_info.get('streak_count', 0)
+        streak_score = min(10, streak_count * 2.5)  # 2-4 streak = 5-10 points
+    
+    # Factors bonus (weighted 5%)
+    factor_score = 0
+    if factors:
+        # Positive minutes trend
+        if factors.get('minutes_trend') == 'up':
+            factor_score += 2
+        # Low variance
+        cv = factors.get('minutes_cv', 0)
+        if cv and cv < 15:
+            factor_score += 2
+        # Not injured
+        if not factors.get('recent_dnp', False):
+            factor_score += 1
+    
+    # Calculate total confidence score (0-100)
+    raw_score = prob_score + ev_score + edge_score + streak_score + factor_score
+    confidence_score = round(min(100, max(0, raw_score)), 1)
+    
+    # Determine letter grade
+    if confidence_score >= 95:
+        grade = 'A+'
+        grade_description = 'Elite Lock'
+    elif confidence_score >= 90:
+        grade = 'A'
+        grade_description = 'Strong Play'
+    elif confidence_score >= 85:
+        grade = 'A-'
+        grade_description = 'Very Good'
+    elif confidence_score >= 80:
+        grade = 'B+'
+        grade_description = 'Good Value'
+    elif confidence_score >= 75:
+        grade = 'B'
+        grade_description = 'Solid'
+    elif confidence_score >= 70:
+        grade = 'B-'
+        grade_description = 'Above Average'
+    elif confidence_score >= 65:
+        grade = 'C+'
+        grade_description = 'Moderate'
+    elif confidence_score >= 60:
+        grade = 'C'
+        grade_description = 'Average'
+    elif confidence_score >= 55:
+        grade = 'C-'
+        grade_description = 'Below Average'
+    elif confidence_score >= 50:
+        grade = 'D'
+        grade_description = 'Risky'
+    else:
+        grade = 'F'
+        grade_description = 'Avoid'
+    
+    # Determine risk tier based on multiple factors
+    risk_factors = 0
+    
+    # Low probability = higher risk
+    if probability < 60:
+        risk_factors += 2
+    elif probability < 70:
+        risk_factors += 1
+    
+    # Negative EV = higher risk
+    if ev < 0:
+        risk_factors += 2
+    elif ev < 5:
+        risk_factors += 1
+    
+    # High variance player = higher risk
+    if factors and factors.get('minutes_cv', 0) > 20:
+        risk_factors += 1
+    
+    # Recent DNP = higher risk
+    if factors and factors.get('recent_dnp'):
+        risk_factors += 2
+    
+    # Negative trend = higher risk
+    if factors and factors.get('minutes_trend') == 'down':
+        risk_factors += 1
+    
+    # No streak = slightly higher risk
+    if not streak_info or not streak_info.get('active'):
+        risk_factors += 0.5
+    
+    # Determine risk tier
+    if risk_factors <= 1:
+        risk_tier = 'Low'
+        risk_color = 'green'
+        risk_description = 'Safe bet with strong fundamentals'
+    elif risk_factors <= 3:
+        risk_tier = 'Medium'
+        risk_color = 'yellow'
+        risk_description = 'Reasonable risk with good upside'
+    else:
+        risk_tier = 'High'
+        risk_color = 'red'
+        risk_description = 'Elevated risk - bet with caution'
+    
+    # Calculate suggested stake (% of bankroll)
+    # Based on modified Kelly Criterion with risk adjustment
+    kelly = ev_data.get('kelly_fraction', 0) / 100  # Convert from percentage
+    
+    # Apply risk multiplier
+    risk_multiplier = {'Low': 1.0, 'Medium': 0.7, 'High': 0.4}.get(risk_tier, 0.5)
+    
+    # Apply confidence multiplier
+    confidence_multiplier = confidence_score / 100
+    
+    # Calculate suggested stake
+    base_stake = kelly * risk_multiplier * confidence_multiplier
+    
+    # Apply stake limits based on confidence
+    if confidence_score >= 90:
+        min_stake, max_stake = 0.03, 0.05  # 3-5% for elite plays
+    elif confidence_score >= 80:
+        min_stake, max_stake = 0.02, 0.04  # 2-4% for strong plays
+    elif confidence_score >= 70:
+        min_stake, max_stake = 0.01, 0.03  # 1-3% for good plays
+    elif confidence_score >= 60:
+        min_stake, max_stake = 0.005, 0.02  # 0.5-2% for moderate plays
+    else:
+        min_stake, max_stake = 0.005, 0.01  # 0.5-1% for risky plays
+    
+    suggested_stake = max(min_stake, min(max_stake, base_stake))
+    suggested_stake_pct = round(suggested_stake * 100, 2)
+    
+    # Calculate unit size (1 unit = 1% of bankroll)
+    units = round(suggested_stake * 100, 1)
+    
+    # Generate stake description
+    if suggested_stake_pct >= 4:
+        stake_label = 'MAX BET'
+    elif suggested_stake_pct >= 3:
+        stake_label = 'Strong'
+    elif suggested_stake_pct >= 2:
+        stake_label = 'Standard'
+    elif suggested_stake_pct >= 1:
+        stake_label = 'Light'
+    else:
+        stake_label = 'Minimal'
+    
+    return {
+        'confidence_score': confidence_score,
+        'grade': grade,
+        'grade_description': grade_description,
+        'risk_tier': risk_tier,
+        'risk_color': risk_color,
+        'risk_description': risk_description,
+        'risk_factors': round(risk_factors, 1),
+        'suggested_stake_pct': suggested_stake_pct,
+        'units': units,
+        'stake_label': stake_label,
+        'breakdown': {
+            'probability_contribution': round(prob_score, 1),
+            'ev_contribution': round(ev_score, 1),
+            'edge_contribution': round(edge_score, 1),
+            'streak_contribution': round(streak_score, 1),
+            'factor_contribution': round(factor_score, 1)
+        }
+    }
+
+
 def grade_matchup(edge_data: Dict, factors: Optional[Dict] = None, matchup_data: Optional[Dict] = None) -> Dict:
     """
     Grade a matchup from A+ to F based on multiple factors.
@@ -279,11 +477,22 @@ def enhance_edge_with_analytics(edge: Dict, default_odds: int = -110) -> Dict:
     """
     probability = edge.get('probability', 0)
     factors = edge.get('factors', {})
+    streak_info = edge.get('streak', {}) if edge.get('streak', {}).get('active') else None
     matchup_data = edge.get('beneficiary', {}).get('matchup_data') if edge.get('beneficiary') else None
     
     # Calculate EV
     ev_data = calculate_expected_value(probability, default_odds)
     edge['ev'] = ev_data
+    
+    # Calculate confidence score with grade, risk tier, and stake suggestion
+    confidence_data = calculate_confidence_score(
+        probability=probability,
+        ev_data=ev_data,
+        edge_data=edge,
+        factors=factors,
+        streak_info=streak_info
+    )
+    edge['confidence'] = confidence_data
     
     # Grade matchup
     matchup_grade = grade_matchup(edge, factors, matchup_data)

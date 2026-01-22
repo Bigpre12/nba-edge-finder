@@ -387,6 +387,181 @@ header h1 {
     color: #7f8c8d;
 }
 
+/* Confidence Meter System */
+.confidence-meter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.confidence-grade {
+    font-size: 0.9em;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    min-width: 32px;
+    text-align: center;
+}
+
+.confidence-score {
+    font-size: 0.85em;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* Grade Colors */
+.grade-aplus, .confidence-grade.grade-aplus {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    color: #000;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.grade-a, .confidence-grade.grade-a {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+    color: #fff;
+}
+
+.grade-aminus, .confidence-grade.grade-aminus {
+    background: rgba(39, 174, 96, 0.8);
+    color: #fff;
+}
+
+.grade-bplus, .confidence-grade.grade-bplus {
+    background: rgba(52, 152, 219, 0.9);
+    color: #fff;
+}
+
+.grade-b, .confidence-grade.grade-b {
+    background: rgba(52, 152, 219, 0.7);
+    color: #fff;
+}
+
+.grade-bminus, .confidence-grade.grade-bminus {
+    background: rgba(52, 152, 219, 0.5);
+    color: #fff;
+}
+
+.grade-cplus, .confidence-grade.grade-cplus {
+    background: rgba(243, 156, 18, 0.8);
+    color: #fff;
+}
+
+.grade-c, .confidence-grade.grade-c {
+    background: rgba(243, 156, 18, 0.6);
+    color: #fff;
+}
+
+.grade-cminus, .confidence-grade.grade-cminus {
+    background: rgba(243, 156, 18, 0.4);
+    color: #fff;
+}
+
+.grade-d, .confidence-grade.grade-d {
+    background: rgba(231, 76, 60, 0.6);
+    color: #fff;
+}
+
+.grade-f, .confidence-grade.grade-f {
+    background: rgba(231, 76, 60, 0.8);
+    color: #fff;
+}
+
+/* Risk Badges */
+.risk-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.risk-badge.risk-low {
+    background: rgba(39, 174, 96, 0.2);
+    color: #27ae60;
+    border: 1px solid rgba(39, 174, 96, 0.4);
+}
+
+.risk-badge.risk-medium {
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
+    border: 1px solid rgba(243, 156, 18, 0.4);
+}
+
+.risk-badge.risk-high {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+/* Stake Badge */
+.stake-badge {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 700;
+}
+
+/* Confidence Details Panel */
+.confidence-details {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 10px 0;
+    border-left: 3px solid #ffd700;
+}
+
+.confidence-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.confidence-row:last-child {
+    border-bottom: none;
+}
+
+.conf-label {
+    color: #888;
+    font-size: 0.85em;
+}
+
+.conf-value {
+    color: #fff;
+    font-size: 0.85em;
+    text-align: right;
+}
+
+.risk-text-low {
+    color: #27ae60;
+}
+
+.risk-text-medium {
+    color: #f39c12;
+}
+
+.risk-text-high {
+    color: #e74c3c;
+}
+
+.ev-positive {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.ev-negative {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
 .load-progress {
     margin: 20px 0;
     padding: 20px;

@@ -235,14 +235,22 @@
                         <div class="oracle-card {{ edge.recommendation|lower }}">
                             <div class="oracle-header-row">
                                 <div class="oracle-player">{{ edge.player }}</div>
-                                {% if edge.ev %}
+                                {% if edge.confidence %}
+                                <div class="confidence-meter">
+                                    <div class="confidence-grade grade-{{ edge.confidence.grade|lower|replace('+', 'plus')|replace('-', 'minus') }}">
+                                        {{ edge.confidence.grade }}
+                                    </div>
+                                    <div class="confidence-score">{{ edge.confidence.confidence_score|int }}</div>
+                                </div>
+                                <div class="risk-badge risk-{{ edge.confidence.risk_tier|lower }}">
+                                    {{ edge.confidence.risk_tier }}
+                                </div>
+                                <div class="stake-badge">
+                                    {{ edge.confidence.units }}u
+                                </div>
+                                {% elif edge.ev %}
                                 <div class="ev-badge {% if edge.ev.is_positive_ev %}positive-ev{% else %}negative-ev{% endif %}">
                                     EV: ${{ edge.ev.ev|round(2) }}
-                                </div>
-                                {% endif %}
-                                {% if edge.matchup_grade %}
-                                <div class="grade-badge grade-{{ edge.matchup_grade.grade|lower|replace('+', 'plus')|replace('-', 'minus') }}">
-                                    {{ edge.matchup_grade.grade }}
                                 </div>
                                 {% endif %}
                             </div>
@@ -1864,22 +1872,53 @@
         }
         
         function renderEdgeCard(edge) {
-            // This is a simplified version - you may need to adjust based on your actual edge structure
+            // Render confidence metrics
+            const confidenceHTML = edge.confidence ? `
+                <div class="confidence-meter">
+                    <div class="confidence-grade grade-${edge.confidence.grade?.toLowerCase().replace('+', 'plus').replace('-', 'minus')}">${edge.confidence.grade}</div>
+                    <div class="confidence-score">${Math.round(edge.confidence.confidence_score)}</div>
+                </div>
+                <div class="risk-badge risk-${edge.confidence.risk_tier?.toLowerCase()}">${edge.confidence.risk_tier}</div>
+                <div class="stake-badge" title="Suggested: ${edge.confidence.suggested_stake_pct}% of bankroll">${edge.confidence.units}u</div>
+            ` : (edge.ev ? `<div class="ev-badge ${edge.ev.is_positive_ev ? 'positive-ev' : 'negative-ev'}">EV: $${edge.ev.ev?.toFixed(2) || '0.00'}</div>` : '');
+            
+            // Render confidence details panel
+            const confidenceDetailsHTML = edge.confidence ? `
+                <div class="confidence-details">
+                    <div class="confidence-row">
+                        <span class="conf-label">Confidence:</span>
+                        <span class="conf-value">${Math.round(edge.confidence.confidence_score)}/100 (${edge.confidence.grade_description})</span>
+                    </div>
+                    <div class="confidence-row">
+                        <span class="conf-label">Risk Level:</span>
+                        <span class="conf-value risk-text-${edge.confidence.risk_tier?.toLowerCase()}">${edge.confidence.risk_tier} - ${edge.confidence.risk_description}</span>
+                    </div>
+                    <div class="confidence-row">
+                        <span class="conf-label">Suggested Stake:</span>
+                        <span class="conf-value"><strong>${edge.confidence.suggested_stake_pct}%</strong> of bankroll (${edge.confidence.stake_label})</span>
+                    </div>
+                    ${edge.ev ? `
+                    <div class="confidence-row">
+                        <span class="conf-label">Expected Value:</span>
+                        <span class="conf-value ${edge.ev.is_positive_ev ? 'ev-positive' : 'ev-negative'}">$${edge.ev.ev?.toFixed(2)} (${edge.ev.ev_percentage?.toFixed(1)}%)</span>
+                    </div>
+                    ` : ''}
+                </div>
+            ` : '';
+            
             return `
                 <div class="oracle-card ${edge.recommendation?.toLowerCase() || ''}">
                     <div class="oracle-header-row">
                         <div class="oracle-player">${edge.player || 'N/A'}</div>
-                        ${edge.ev ? `<div class="ev-badge ${edge.ev.is_positive_ev ? 'positive-ev' : 'negative-ev'}">EV: $${edge.ev.ev?.toFixed(2) || '0.00'}</div>` : ''}
-                        ${edge.matchup_grade ? `<div class="grade-badge grade-${edge.matchup_grade.grade?.toLowerCase().replace('+', 'plus').replace('-', 'minus')}">${edge.matchup_grade.grade}</div>` : ''}
+                        ${confidenceHTML}
                     </div>
+                    ${confidenceDetailsHTML}
                     ${edge.oracle ? `
                     <div class="oracle-content">
                         <div class="oracle-line"><strong>The Line:</strong> ${edge.oracle.verdict || edge.line || 'N/A'}</div>
                         <div class="oracle-sharp"><strong>The Sharp Angle:</strong> ${edge.oracle.sharp_angle || 'N/A'}</div>
                         <div class="oracle-key"><strong>Key Data Point:</strong> ${edge.oracle.key_data || 'N/A'}</div>
                         <div class="oracle-verdict"><strong>The Verdict:</strong> ${edge.oracle.verdict || 'N/A'}</div>
-                        <div class="oracle-confidence"><strong>Confidence:</strong> <span class="confidence-badge confidence-${Math.floor(edge.oracle.confidence || 1)}">${edge.oracle.confidence || 1} Units</span></div>
-                        <div class="oracle-risk"><strong>Risk Factor:</strong> ${edge.oracle.risk_factor || 'N/A'}</div>
                     </div>
                     ` : `
                     <div class="edge-details">
