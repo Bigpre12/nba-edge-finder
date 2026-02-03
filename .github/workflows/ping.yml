@@ -13,7 +13,7 @@ jobs:
       - name: Ping Website
         run: |
           # Replace with your actual website URL
-          URL="${WEBSITE_URL:-https://your-app.onrender.com/ping}"
+          URL="${WEBSITE_URL:-https://perplex-edge-production.up.railway.app
           echo "Pinging: $URL"
           curl -f --max-time 10 "$URL" || exit 1
           echo "✓ Ping successful"
